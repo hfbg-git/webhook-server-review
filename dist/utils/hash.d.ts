@@ -1,0 +1,2 @@
+export declare function generateReviewId(brandName: string, storeName: string, platform: string, rating: string, reviewText: string, reviewCreatedAt: string): string;
+//# sourceMappingURL=hash.d.ts.map
