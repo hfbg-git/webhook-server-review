@@ -2,6 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import { healthRoute } from './routes/health.js';
 import { webhookRoute } from './routes/webhook.js';
+import { authRoute } from './routes/auth.js';
 import { processNewReviews } from './services/aiProcessor.js';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -26,6 +27,7 @@ const fastify = Fastify({
 
 fastify.register(healthRoute);
 fastify.register(webhookRoute);
+fastify.register(authRoute);
 
 const startAIProcessor = () => {
   if (!process.env.OPENAI_API_KEY) {

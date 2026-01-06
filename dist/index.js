@@ -7,6 +7,7 @@ require("dotenv/config");
 const fastify_1 = __importDefault(require("fastify"));
 const health_js_1 = require("./routes/health.js");
 const webhook_js_1 = require("./routes/webhook.js");
+const auth_js_1 = require("./routes/auth.js");
 const aiProcessor_js_1 = require("./services/aiProcessor.js");
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
@@ -27,6 +28,7 @@ const fastify = (0, fastify_1.default)({
 });
 fastify.register(health_js_1.healthRoute);
 fastify.register(webhook_js_1.webhookRoute);
+fastify.register(auth_js_1.authRoute);
 const startAIProcessor = () => {
     if (!process.env.OPENAI_API_KEY) {
         fastify.log.warn('OPENAI_API_KEY not set, AI processing disabled');
