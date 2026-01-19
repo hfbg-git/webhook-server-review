@@ -7,6 +7,7 @@ exports.groupByBrand = groupByBrand;
 exports.aggregateBrandWeeklyData = aggregateBrandWeeklyData;
 const googleAuth_js_1 = require("./googleAuth.js");
 const googleAuth_js_2 = require("./googleAuth.js");
+const brandRegistry_js_1 = require("./brandRegistry.js");
 const ROOT_FOLDER_ID = process.env.RAW_SHEETS_FOLDER_ID || '';
 const SHEET_PREFIX = process.env.RAW_SHEET_NAME_PREFIX || 'ReviewDoctor_Raw_';
 const REVIEWS_TAB = 'Reviews';
@@ -148,7 +149,7 @@ function parseKoreanDate(dateStr) {
  * brand_name에서 순수 브랜드명 추출
  * 예: "화락바베큐치킨 원주단구점_배달의민족" → "화락바베큐치킨"
  * 예: "튀긴치킨 싫어서 구운치킨만 파는 집 세종종촌점_쿠팡" → "튀긴치킨 싫어서 구운치킨만 파는 집"
- * 예: "튀긴치킨싫어서구운치킨만파는집-세종종촌점" → "튀긴치킨싫어서구운치킨만파는집"
+ * 예: "튀긴치킨싫어서구운치킨만파는집-세종종촌점" → "튀긴치킨 싫어서 구운치킨만 파는 집"
  */
 function extractPureBrandName(rawBrandName) {
     if (!rawBrandName)
@@ -170,6 +171,8 @@ function extractPureBrandName(rawBrandName) {
             break;
         }
     }
+    // 3. 브랜드 레지스트리에서 표준 브랜드명 조회
+    brandName = (0, brandRegistry_js_1.getStandardBrandNameSync)(brandName);
     return brandName;
 }
 /**

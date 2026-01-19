@@ -6,6 +6,7 @@ import { authRoute } from './routes/auth.js';
 import { weeklyReportRoute } from './routes/weeklyReport.js';
 import { processNewReviews } from './services/aiProcessor.js';
 import { startWeeklyReportScheduler } from './services/weeklyReportScheduler.js';
+import { loadBrandCache, seedInitialBrands } from './services/brandRegistry.js';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
@@ -49,6 +50,10 @@ const startAIProcessor = () => {
 
 const start = async () => {
   try {
+    // 브랜드 레지스트리 캐시 로드
+    await loadBrandCache();
+    await seedInitialBrands();
+
     await fastify.listen({ port: PORT, host: HOST });
     console.log(`Server is running on http://${HOST}:${PORT}`);
 

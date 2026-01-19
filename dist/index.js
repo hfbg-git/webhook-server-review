@@ -11,6 +11,7 @@ const auth_js_1 = require("./routes/auth.js");
 const weeklyReport_js_1 = require("./routes/weeklyReport.js");
 const aiProcessor_js_1 = require("./services/aiProcessor.js");
 const weeklyReportScheduler_js_1 = require("./services/weeklyReportScheduler.js");
+const brandRegistry_js_1 = require("./services/brandRegistry.js");
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
 const AI_BATCH_INTERVAL = parseInt(process.env.AI_BATCH_INTERVAL || '300000', 10);
@@ -45,6 +46,9 @@ const startAIProcessor = () => {
 };
 const start = async () => {
     try {
+        // 브랜드 레지스트리 캐시 로드
+        await (0, brandRegistry_js_1.loadBrandCache)();
+        await (0, brandRegistry_js_1.seedInitialBrands)();
         await fastify.listen({ port: PORT, host: HOST });
         console.log(`Server is running on http://${HOST}:${PORT}`);
         startAIProcessor();
