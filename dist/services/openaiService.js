@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeReview = analyzeReview;
+exports.generateWeeklyInsights = generateWeeklyInsights;
 const openai_1 = __importDefault(require("openai"));
 const reviewAnalysis_js_1 = require("../prompts/reviewAnalysis.js");
 let openaiClient = null;
@@ -83,5 +84,77 @@ async function analyzeReview(review) {
         p3Keywords: analysis.keywords.join(', '),
         p4WeeklyData: JSON.stringify(weeklyData),
     };
+}
+/**
+ * 주간 리포트용 AI 인사이트 생성
+ */
+async function generateWeeklyInsights(data) {
+    const client = getOpenAIClient();
+    const prompt = `당신은 프랜차이즈 리뷰 분석 전문가입니다. 아래 주간 데이터를 분석하여 운영에 도움이 되는 인사이트를 제공해주세요.
+
+## 브랜드: ${data.brandName}
+
+### 주간 현황
+- 총 리뷰: ${data.totalReviews}건
+- 평균 별점: ${data.avgRating}점
+- 긍정 비율: ${data.positiveRate}
+- 부정 비율: ${data.negativeRate}
+
+### 강점 키워드
+${data.topKeywords.join(', ')}
+
+### 이슈 키워드 (부정 연관)
+${data.issueKeywords.join(', ')}
+
+### 매장별 현황
+${data.storeStats.map(s => `- ${s.storeName}: 리뷰 ${s.totalReviews}건, 부정 ${s.negativeRate}, 별점 ${s.avgRating}, 키워드: ${s.topKeywords.join(', ')}`).join('\n')}
+
+### 키워드 트렌드 (전주 대비)
+${data.keywordTrends.map(k => `- ${k.keyword}: ${k.count}건 (${k.trend}), ${k.sentiment}`).join('\n')}
+
+## 요청사항
+다음 JSON 형식으로 응답해주세요:
+
+{
+  "summary": "이번 주 브랜드 전체 상황을 2-3문장으로 요약. 핵심 강점과 개선점을 포함.",
+  "storeActionItems": [
+    {"storeName": "매장명", "actionItem": "구체적인 액션 아이템 (이모지 포함)"}
+  ],
+  "alerts": [
+    {"level": "🔴 긴급 또는 🟡 주의 또는 🟢 좋은소식", "message": "알림 내용"}
+  ]
+}
+
+### 작성 지침
+1. summary: 운영자가 빠르게 파악할 수 있도록 핵심만 간결하게
+2. storeActionItems: 부정 비율이 높거나 특정 이슈가 있는 매장에만 작성. 양호한 매장은 "✅ 양호"로 표시
+3. alerts:
+   - 🔴 긴급: 부정 비율 40% 이상, 안전 관련 키워드(트러블, 알러지) 급증
+   - 🟡 주의: 부정 비율 30% 이상, 특정 이슈 키워드 증가 추세
+   - 🟢 좋은소식: 긍정 키워드 급증, 새로운 강점 발견`;
+    try {
+        const response = await client.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.5,
+            max_tokens: 1500,
+            response_format: { type: 'json_object' },
+        });
+        const content = response.choices[0]?.message?.content || '';
+        const parsed = JSON.parse(content);
+        return {
+            summary: parsed.summary || '',
+            storeActionItems: parsed.storeActionItems || [],
+            alerts: parsed.alerts || [],
+        };
+    }
+    catch (error) {
+        console.error('Failed to generate weekly insights:', error);
+        return {
+            summary: '인사이트 생성 실패',
+            storeActionItems: [],
+            alerts: [],
+        };
+    }
 }
 //# sourceMappingURL=openaiService.js.map

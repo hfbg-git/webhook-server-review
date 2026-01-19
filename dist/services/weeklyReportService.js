@@ -5,6 +5,7 @@ exports.generateBrandWeeklyReport = generateBrandWeeklyReport;
 exports.generateWeeklyReportsForDate = generateWeeklyReportsForDate;
 const weeklyDataAggregator_js_1 = require("./weeklyDataAggregator.js");
 const weeklySheetBuilder_js_1 = require("./weeklySheetBuilder.js");
+const openaiService_js_1 = require("./openaiService.js");
 /**
  * 2주 전 기간 계산 (지난주 대비 비교용)
  */
@@ -38,6 +39,42 @@ async function generateSingleBrandReport(brandName, weekLabel, currentWeekRange,
         const lastWeekBrandReviews = lastWeekReviews.filter((r) => r.brandName === brandName);
         // 데이터 집계
         const aggregation = await (0, weeklyDataAggregator_js_1.aggregateBrandWeeklyData)(brandName, brandReviews, weekLabel, lastWeekBrandReviews.length > 0 ? lastWeekBrandReviews : undefined);
+        // AI 인사이트 생성
+        try {
+            logger.info({ msg: 'Generating AI insights for brand', brandName });
+            const insightData = {
+                brandName,
+                totalReviews: aggregation.totalReviews,
+                avgRating: aggregation.avgRating,
+                positiveRate: aggregation.sentimentDistribution.positiveRate,
+                negativeRate: aggregation.sentimentDistribution.negativeRate,
+                topKeywords: aggregation.topKeywords.slice(0, 5).map(k => k.keyword),
+                issueKeywords: aggregation.issueKeywords.slice(0, 5).map(k => k.keyword),
+                storeStats: aggregation.storeStats.map(s => ({
+                    storeName: s.storeName,
+                    totalReviews: s.totalReviews,
+                    negativeRate: s.negativeRate,
+                    avgRating: s.avgRating,
+                    topKeywords: s.topKeywords,
+                })),
+                keywordTrends: aggregation.keywordStats.slice(0, 10).map(k => ({
+                    keyword: k.keyword,
+                    count: k.totalCount,
+                    trend: k.trendVsLastWeek,
+                    sentiment: k.mainSentiment,
+                })),
+            };
+            const aiInsights = await (0, openaiService_js_1.generateWeeklyInsights)(insightData);
+            aggregation.aiInsights = aiInsights;
+            logger.info({ msg: 'AI insights generated successfully', brandName });
+        }
+        catch (error) {
+            logger.warn({
+                msg: 'Failed to generate AI insights, proceeding without',
+                brandName,
+                error: error.message,
+            });
+        }
         // 시트 생성
         const { spreadsheetId, spreadsheetUrl } = await (0, weeklySheetBuilder_js_1.createBrandWeeklyReportSheet)(aggregation, logger);
         logger.info({

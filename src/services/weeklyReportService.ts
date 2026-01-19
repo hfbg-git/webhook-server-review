@@ -6,7 +6,8 @@ import {
   aggregateBrandWeeklyData,
 } from './weeklyDataAggregator.js';
 import { createBrandWeeklyReportSheet } from './weeklySheetBuilder.js';
-import { WeeklyReportResult, WeekRange } from '../types/index.js';
+import { generateWeeklyInsights, WeeklyInsightData } from './openaiService.js';
+import { WeeklyReportResult, WeekRange, AIInsights } from '../types/index.js';
 
 interface Logger {
   info: (obj: object | string) => void;
@@ -70,6 +71,45 @@ async function generateSingleBrandReport(
       weekLabel,
       lastWeekBrandReviews.length > 0 ? lastWeekBrandReviews : undefined
     );
+
+    // AI 인사이트 생성
+    try {
+      logger.info({ msg: 'Generating AI insights for brand', brandName });
+
+      const insightData: WeeklyInsightData = {
+        brandName,
+        totalReviews: aggregation.totalReviews,
+        avgRating: aggregation.avgRating,
+        positiveRate: aggregation.sentimentDistribution.positiveRate,
+        negativeRate: aggregation.sentimentDistribution.negativeRate,
+        topKeywords: aggregation.topKeywords.slice(0, 5).map(k => k.keyword),
+        issueKeywords: aggregation.issueKeywords.slice(0, 5).map(k => k.keyword),
+        storeStats: aggregation.storeStats.map(s => ({
+          storeName: s.storeName,
+          totalReviews: s.totalReviews,
+          negativeRate: s.negativeRate,
+          avgRating: s.avgRating,
+          topKeywords: s.topKeywords,
+        })),
+        keywordTrends: aggregation.keywordStats.slice(0, 10).map(k => ({
+          keyword: k.keyword,
+          count: k.totalCount,
+          trend: k.trendVsLastWeek,
+          sentiment: k.mainSentiment,
+        })),
+      };
+
+      const aiInsights = await generateWeeklyInsights(insightData);
+      aggregation.aiInsights = aiInsights as AIInsights;
+
+      logger.info({ msg: 'AI insights generated successfully', brandName });
+    } catch (error) {
+      logger.warn({
+        msg: 'Failed to generate AI insights, proceeding without',
+        brandName,
+        error: (error as Error).message,
+      });
+    }
 
     // 시트 생성
     const { spreadsheetId, spreadsheetUrl } = await createBrandWeeklyReportSheet(

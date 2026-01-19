@@ -222,6 +222,33 @@ async function createDashboardTab(
     values.push([`${i + 1}위`, `${kw.keyword} (${kw.totalCount}건)`]);
   });
 
+  // AI 인사이트 추가
+  if (aggregation.aiInsights) {
+    values.push([]);
+    values.push(['🤖 AI 주간 요약']);
+    values.push([aggregation.aiInsights.summary]);
+
+    values.push([]);
+    values.push(['🚨 알림']);
+    if (aggregation.aiInsights.alerts && aggregation.aiInsights.alerts.length > 0) {
+      aggregation.aiInsights.alerts.forEach((alert) => {
+        values.push([alert.level, alert.message]);
+      });
+    } else {
+      values.push(['이번 주 특별한 알림 없음']);
+    }
+
+    values.push([]);
+    values.push(['📋 매장별 액션 아이템']);
+    if (aggregation.aiInsights.storeActionItems && aggregation.aiInsights.storeActionItems.length > 0) {
+      aggregation.aiInsights.storeActionItems.forEach((item) => {
+        values.push([item.storeName, item.actionItem]);
+      });
+    } else {
+      values.push(['모든 매장 양호']);
+    }
+  }
+
   await writeToSheet(spreadsheetId, '대시보드!A1', values);
 }
 

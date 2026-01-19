@@ -116,6 +116,17 @@ export interface NegativeReview {
     originalText: string;
     priority: '🔴 높음' | '🟡 중간' | '🟢 낮음';
 }
+export interface AIInsights {
+    summary: string;
+    storeActionItems: Array<{
+        storeName: string;
+        actionItem: string;
+    }>;
+    alerts: Array<{
+        level: '🔴 긴급' | '🟡 주의' | '🟢 좋은소식';
+        message: string;
+    }>;
+}
 export interface BrandWeeklyAggregation {
     brandName: string;
     weekLabel: string;
@@ -135,6 +146,7 @@ export interface BrandWeeklyAggregation {
         positiveRateChange: string;
         negativeRateChange: string;
     } | null;
+    aiInsights?: AIInsights;
 }
 export interface WeeklyReportResult {
     success: boolean;
