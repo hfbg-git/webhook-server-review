@@ -185,6 +185,7 @@ function parseKoreanDate(dateStr: string): Date | null {
  * brand_name에서 순수 브랜드명 추출
  * 예: "화락바베큐치킨 원주단구점_배달의민족" → "화락바베큐치킨"
  * 예: "튀긴치킨 싫어서 구운치킨만 파는 집 세종종촌점_쿠팡" → "튀긴치킨 싫어서 구운치킨만 파는 집"
+ * 예: "튀긴치킨싫어서구운치킨만파는집-세종종촌점" → "튀긴치킨싫어서구운치킨만파는집"
  */
 function extractPureBrandName(rawBrandName: string): string {
   if (!rawBrandName) return '';
@@ -192,15 +193,21 @@ function extractPureBrandName(rawBrandName: string): string {
   // 1. 먼저 _플랫폼 제거 (예: _배달의민족, _쿠팡)
   let brandName = rawBrandName.split('_')[0].trim();
 
-  // 2. 지점명 패턴 제거 (OO점, OO지점 등)
-  // 패턴: 마지막에 나오는 "공백 + 한글/영문/숫자 + 점" 또는 "공백 + 한글/영문/숫자 + 지점"
-  const storePattern = /\s+[\w가-힣]+점$/;
-  const branchPattern = /\s+[\w가-힣]+지점$/;
+  // 2. 지점명 패턴 제거
+  // 패턴 A: "공백 + 지점명 + 점/지점" (예: " 원주단구점", " 세종종촌지점")
+  // 패턴 B: "-지점명 + 점/지점" (예: "-세종종촌점", "-강남점")
+  const patterns = [
+    /\s+[\w가-힣]+점$/,      // 공백 + OO점
+    /\s+[\w가-힣]+지점$/,    // 공백 + OO지점
+    /-[\w가-힣]+점$/,        // -OO점
+    /-[\w가-힣]+지점$/,      // -OO지점
+  ];
 
-  if (storePattern.test(brandName)) {
-    brandName = brandName.replace(storePattern, '').trim();
-  } else if (branchPattern.test(brandName)) {
-    brandName = brandName.replace(branchPattern, '').trim();
+  for (const pattern of patterns) {
+    if (pattern.test(brandName)) {
+      brandName = brandName.replace(pattern, '').trim();
+      break;
+    }
   }
 
   return brandName;
