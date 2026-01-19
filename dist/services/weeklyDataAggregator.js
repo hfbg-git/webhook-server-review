@@ -145,6 +145,28 @@ function parseKoreanDate(dateStr) {
     }
 }
 /**
+ * brand_name에서 순수 브랜드명 추출
+ * 예: "화락바베큐치킨 원주단구점_배달의민족" → "화락바베큐치킨"
+ * 예: "튀긴치킨 싫어서 구운치킨만 파는 집 세종종촌점_쿠팡" → "튀긴치킨 싫어서 구운치킨만 파는 집"
+ */
+function extractPureBrandName(rawBrandName) {
+    if (!rawBrandName)
+        return '';
+    // 1. 먼저 _플랫폼 제거 (예: _배달의민족, _쿠팡)
+    let brandName = rawBrandName.split('_')[0].trim();
+    // 2. 지점명 패턴 제거 (OO점, OO지점 등)
+    // 패턴: 마지막에 나오는 "공백 + 한글/영문/숫자 + 점" 또는 "공백 + 한글/영문/숫자 + 지점"
+    const storePattern = /\s+[\w가-힣]+점$/;
+    const branchPattern = /\s+[\w가-힣]+지점$/;
+    if (storePattern.test(brandName)) {
+        brandName = brandName.replace(storePattern, '').trim();
+    }
+    else if (branchPattern.test(brandName)) {
+        brandName = brandName.replace(branchPattern, '').trim();
+    }
+    return brandName;
+}
+/**
  * 스프레드시트에서 리뷰 데이터 조회
  */
 async function getReviewsFromSheet(spreadsheetId) {
@@ -178,10 +200,12 @@ async function getReviewsFromSheet(spreadsheetId) {
         if (row[11]) {
             keywords = row[11].split(',').map((k) => k.trim()).filter(Boolean);
         }
+        // 순수 브랜드명 추출 (지점명, 플랫폼 제거)
+        const pureBrandName = extractPureBrandName(row[2] || '');
         reviews.push({
             receivedAt: row[0] || '',
             reviewCreatedAt: row[1] || '',
-            brandName: row[2] || '',
+            brandName: pureBrandName,
             storeName: row[3] || '',
             platform: row[4] || '',
             rating: parseFloat(row[5]) || 0,
