@@ -72,3 +72,116 @@ export interface WeeklyData {
 }
 
 export type ReviewHeader = (typeof REVIEWS_HEADERS)[number];
+
+// Weekly Report Types
+export interface WeeklyReviewRow {
+  receivedAt: string;
+  reviewCreatedAt: string;
+  brandName: string;
+  storeName: string;
+  platform: string;
+  rating: number;
+  reviewId: string;
+  reviewText: string;
+  status: string;
+  sentiment: '긍정' | '부정' | '중립';
+  summary: string;
+  keywords: string[];
+  weeklyData: WeeklyData | null;
+  processedAt: string;
+  aiStatus: string;
+  rowIndex: number;
+}
+
+export interface SentimentDistribution {
+  positive: number;
+  negative: number;
+  neutral: number;
+  positiveRate: string;
+  negativeRate: string;
+  neutralRate: string;
+}
+
+export interface KeywordStat {
+  keyword: string;
+  totalCount: number;
+  positiveCount: number;
+  negativeCount: number;
+  neutralCount: number;
+  mainSentiment: '긍정' | '부정' | '중립';
+  sentimentRatio: string;
+  trendVsLastWeek: string;
+}
+
+export interface StoreStat {
+  storeName: string;
+  totalReviews: number;
+  positive: number;
+  negative: number;
+  neutral: number;
+  positiveRate: string;
+  negativeRate: string;
+  avgRating: number;
+  topKeywords: string[];
+  actionNeeded: string;
+}
+
+export interface PlatformStat {
+  platform: string;
+  totalReviews: number;
+  positive: number;
+  negative: number;
+  neutral: number;
+  positiveRate: string;
+  avgRating: number;
+  topKeywords: string[];
+}
+
+export interface NegativeReview {
+  receivedAt: string;
+  storeName: string;
+  platform: string;
+  rating: number;
+  summary: string;
+  keywords: string[];
+  originalText: string;
+  priority: '🔴 높음' | '🟡 중간' | '🟢 낮음';
+}
+
+export interface BrandWeeklyAggregation {
+  brandName: string;
+  weekLabel: string;
+  totalReviews: number;
+  avgRating: number;
+  sentimentDistribution: SentimentDistribution;
+  topKeywords: KeywordStat[];
+  issueKeywords: KeywordStat[];
+  storeStats: StoreStat[];
+  keywordStats: KeywordStat[];
+  negativeReviews: NegativeReview[];
+  platformStats: PlatformStat[];
+  rawData: WeeklyReviewRow[];
+  // 지난주 대비 비교 데이터
+  lastWeekComparison: {
+    totalReviewsChange: string;
+    avgRatingChange: string;
+    positiveRateChange: string;
+    negativeRateChange: string;
+  } | null;
+}
+
+export interface WeeklyReportResult {
+  success: boolean;
+  brandName: string;
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+  weekLabel: string;
+  totalReviews: number;
+  error?: string;
+}
+
+export interface WeekRange {
+  startDate: Date;
+  endDate: Date;
+  weekLabel: string;
+}

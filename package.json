@@ -29,10 +29,12 @@
     "fastify": "^4.28.1",
     "googleapis": "^144.0.0",
     "lru-cache": "^10.4.3",
+    "node-cron": "^4.2.1",
     "openai": "^6.15.0",
     "typescript": "^5.5.3"
   },
   "devDependencies": {
+    "@types/node-cron": "^3.0.11",
     "@typescript-eslint/eslint-plugin": "^7.16.0",
     "@typescript-eslint/parser": "^7.16.0",
     "eslint": "^8.57.0",

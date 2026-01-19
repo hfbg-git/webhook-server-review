@@ -8,7 +8,9 @@ const fastify_1 = __importDefault(require("fastify"));
 const health_js_1 = require("./routes/health.js");
 const webhook_js_1 = require("./routes/webhook.js");
 const auth_js_1 = require("./routes/auth.js");
+const weeklyReport_js_1 = require("./routes/weeklyReport.js");
 const aiProcessor_js_1 = require("./services/aiProcessor.js");
+const weeklyReportScheduler_js_1 = require("./services/weeklyReportScheduler.js");
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
 const AI_BATCH_INTERVAL = parseInt(process.env.AI_BATCH_INTERVAL || '300000', 10);
@@ -29,6 +31,7 @@ const fastify = (0, fastify_1.default)({
 fastify.register(health_js_1.healthRoute);
 fastify.register(webhook_js_1.webhookRoute);
 fastify.register(auth_js_1.authRoute);
+fastify.register(weeklyReport_js_1.weeklyReportRoute);
 const startAIProcessor = () => {
     if (!process.env.OPENAI_API_KEY) {
         fastify.log.warn('OPENAI_API_KEY not set, AI processing disabled');
@@ -45,6 +48,7 @@ const start = async () => {
         await fastify.listen({ port: PORT, host: HOST });
         console.log(`Server is running on http://${HOST}:${PORT}`);
         startAIProcessor();
+        (0, weeklyReportScheduler_js_1.startWeeklyReportScheduler)(fastify.log);
     }
     catch (err) {
         fastify.log.error(err);

@@ -3,7 +3,9 @@ import Fastify from 'fastify';
 import { healthRoute } from './routes/health.js';
 import { webhookRoute } from './routes/webhook.js';
 import { authRoute } from './routes/auth.js';
+import { weeklyReportRoute } from './routes/weeklyReport.js';
 import { processNewReviews } from './services/aiProcessor.js';
+import { startWeeklyReportScheduler } from './services/weeklyReportScheduler.js';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
@@ -28,6 +30,7 @@ const fastify = Fastify({
 fastify.register(healthRoute);
 fastify.register(webhookRoute);
 fastify.register(authRoute);
+fastify.register(weeklyReportRoute);
 
 const startAIProcessor = () => {
   if (!process.env.OPENAI_API_KEY) {
@@ -50,6 +53,7 @@ const start = async () => {
     console.log(`Server is running on http://${HOST}:${PORT}`);
 
     startAIProcessor();
+    startWeeklyReportScheduler(fastify.log);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
