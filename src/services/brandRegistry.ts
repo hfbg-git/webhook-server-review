@@ -18,6 +18,14 @@ function normalizeKey(brandName: string): string {
 }
 
 /**
+ * 앞 3글자 키 생성 (공백 제거 후)
+ */
+function getPrefix3Key(brandName: string): string {
+  const noSpace = brandName.replace(/\s+/g, '');
+  return noSpace.slice(0, 3);
+}
+
+/**
  * 현재 월의 스프레드시트 ID 가져오기
  */
 async function getCurrentSheetId(): Promise<string> {
@@ -95,7 +103,7 @@ async function ensureRegistryTab(spreadsheetId: string): Promise<void> {
 }
 
 /**
- * 레지스트리에서 브랜드 찾기
+ * 레지스트리에서 브랜드 찾기 (정확한 키 매칭)
  */
 async function findInRegistry(
   spreadsheetId: string,
@@ -113,6 +121,35 @@ async function findInRegistry(
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === normalizedKey) {
         return rows[i][1] || null;
+      }
+    }
+  } catch {
+    // 탭이 없을 수 있음
+  }
+
+  return null;
+}
+
+/**
+ * 레지스트리에서 앞 3글자로 브랜드 찾기
+ */
+async function findInRegistryByPrefix(
+  spreadsheetId: string,
+  prefix: string
+): Promise<{ key: string; standard: string } | null> {
+  const sheets = getSheetsClient();
+
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${BRAND_REGISTRY_TAB}!A:B`,
+    });
+
+    const rows = response.data.values || [];
+    for (let i = 1; i < rows.length; i++) {
+      const key = rows[i][0];
+      if (key && key.slice(0, 3) === prefix) {
+        return { key, standard: rows[i][1] || key };
       }
     }
   } catch {
@@ -213,7 +250,7 @@ export async function loadBrandCache(): Promise<void> {
 }
 
 /**
- * 표준 브랜드명 조회/등록
+ * 표준 브랜드명 조회/등록 (앞 3글자 매칭)
  * @param rawBrandName 원본 브랜드명 (지점명, 플랫폼 제거 후)
  * @returns 표준화된 브랜드명
  */
@@ -221,29 +258,44 @@ export async function getStandardBrandName(rawBrandName: string): Promise<string
   if (!rawBrandName) return '';
 
   const key = normalizeKey(rawBrandName);
+  const prefix = getPrefix3Key(rawBrandName);
 
-  // 캐시에서 먼저 검색
-  if (brandCache.has(key)) {
-    return brandCache.get(key)!;
+  // 캐시에서 앞 3글자가 같은 브랜드 찾기
+  for (const [cachedKey, standard] of brandCache.entries()) {
+    const cachedPrefix = cachedKey.slice(0, 3);
+    if (cachedPrefix === prefix) {
+      // 새 변형이면 별칭에 추가 (비동기)
+      if (cachedKey !== key) {
+        try {
+          const spreadsheetId = await getCurrentSheetId();
+          await updateAliases(spreadsheetId, cachedKey, rawBrandName);
+        } catch {
+          // 별칭 업데이트 실패해도 무시
+        }
+      }
+      return standard;
+    }
   }
 
   try {
     const spreadsheetId = await getCurrentSheetId();
     await ensureRegistryTab(spreadsheetId);
 
-    // 시트에서 검색
-    const existing = await findInRegistry(spreadsheetId, key);
+    // 시트에서 앞 3글자 매칭으로 검색
+    const existing = await findInRegistryByPrefix(spreadsheetId, prefix);
     if (existing) {
-      brandCache.set(key, existing);
+      brandCache.set(existing.key, existing.standard);
       // 새 변형이면 별칭에 추가
-      await updateAliases(spreadsheetId, key, rawBrandName);
-      return existing;
+      if (existing.key !== key) {
+        await updateAliases(spreadsheetId, existing.key, rawBrandName);
+      }
+      return existing.standard;
     }
 
     // 새 브랜드 등록 (첫 입력 형태를 표준으로)
     await registerBrand(spreadsheetId, key, rawBrandName);
     brandCache.set(key, rawBrandName);
-    console.log(`New brand registered: ${rawBrandName} (key: ${key})`);
+    console.log(`New brand registered: ${rawBrandName} (key: ${key}, prefix: ${prefix})`);
     return rawBrandName;
   } catch (error) {
     console.warn('Brand registry error, using raw name:', (error as Error).message);
@@ -252,14 +304,24 @@ export async function getStandardBrandName(rawBrandName: string): Promise<string
 }
 
 /**
- * 캐시에서 동기적으로 조회 (캐시 미스 시 원본 반환)
+ * 캐시에서 동기적으로 조회 (앞 3글자 매칭)
  * 주간 리포트처럼 대량 처리 시 사용
  */
 export function getStandardBrandNameSync(rawBrandName: string): string {
   if (!rawBrandName) return '';
 
-  const key = normalizeKey(rawBrandName);
-  return brandCache.get(key) || rawBrandName;
+  const prefix = getPrefix3Key(rawBrandName);
+
+  // 캐시에서 앞 3글자가 같은 브랜드 찾기
+  for (const [key, standard] of brandCache.entries()) {
+    const keyPrefix = key.slice(0, 3);
+    if (keyPrefix === prefix) {
+      return standard;
+    }
+  }
+
+  // 없으면 원본 반환
+  return rawBrandName;
 }
 
 /**
@@ -271,12 +333,16 @@ export function isCacheLoaded(): boolean {
 
 /**
  * 초기 브랜드 데이터 시딩 (1회성)
+ *
+ * 앞 3글자 매칭으로 대부분 자동 처리되므로,
+ * 앞 3글자가 다르지만 같은 브랜드인 경우만 수동 등록 필요
  */
 export async function seedInitialBrands(): Promise<void> {
+  // 앞 3글자가 다르지만 같은 브랜드로 처리해야 하는 경우
   const INITIAL_BRANDS = [
-    { key: '튀긴치킨싫어서구운치킨만파는집', standard: '튀긴치킨 싫어서 구운치킨만 파는 집' },
-    { key: '행복한찜닭', standard: '행복한 찜닭' },
-    { key: '화락바베큐치킨', standard: '화락바베큐치킨' },
+    // 문화치킨 / 문화통닭 → 앞3글자 '문화치' vs '문화통' 다름
+    { key: '문화통닭', standard: '문화치킨' },
+    // 화락바베큐치킨 / 화락숯불바베큐치킨 → 앞3글자 '화락바' vs '화락숯' 다름
     { key: '화락숯불바베큐치킨', standard: '화락바베큐치킨' },
   ];
 
