@@ -9,6 +9,8 @@ function parseWebhookPayload(payload) {
         rating: String(payload.rating ?? ''),
         reviewText: payload.review_text || '',
         reviewCreatedAt: payload.created_at || '',
+        reviewUrl: payload.review_url || '',
+        imageUrl: payload.image_url || '',
     };
 }
 //# sourceMappingURL=parser.js.map

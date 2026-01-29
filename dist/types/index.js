@@ -17,5 +17,7 @@ exports.REVIEWS_HEADERS = [
     'p4_weekly_data', // M - JSON (위클리용 메타데이터)
     'processed_at', // N - AI 처리 완료 시간
     'ai_status', // O - DONE / ERROR / FAILED
+    'review_url', // P - 리뷰 원본 URL
+    'image_url', // Q - 이미지 URL
 ];
 //# sourceMappingURL=index.js.map

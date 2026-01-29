@@ -5,6 +5,9 @@ export interface WebhookPayload {
   rating: number;
   review_text: string;
   created_at: string;
+  // 신규 필드 (optional)
+  review_url?: string;      // 리뷰 원본 URL
+  image_url?: string;       // 리뷰 이미지 URL
 }
 
 export interface ParsedReview {
@@ -17,6 +20,9 @@ export interface ParsedReview {
   reviewId: string;
   reviewText: string;
   status: 'NEW';
+  // 신규 필드 (optional)
+  reviewUrl?: string;
+  imageUrl?: string;
 }
 
 export interface WebhookResponse {
@@ -52,6 +58,8 @@ export const REVIEWS_HEADERS = [
   'p4_weekly_data',     // M - JSON (위클리용 메타데이터)
   'processed_at',       // N - AI 처리 완료 시간
   'ai_status',          // O - DONE / ERROR / FAILED
+  'review_url',         // P - 리뷰 원본 URL
+  'image_url',          // Q - 이미지 URL
 ] as const;
 
 export interface AIProcessingResult {
@@ -69,6 +77,9 @@ export interface WeeklyData {
   summary: string;
   rating: number;
   original_text?: string;
+  // 신규 필드 (optional)
+  reviewUrl?: string;
+  imageUrl?: string;
 }
 
 export type ReviewHeader = (typeof REVIEWS_HEADERS)[number];
@@ -91,6 +102,9 @@ export interface WeeklyReviewRow {
   processedAt: string;
   aiStatus: string;
   rowIndex: number;
+  // 신규 필드 (optional)
+  reviewUrl?: string;
+  imageUrl?: string;
 }
 
 export interface SentimentDistribution {
@@ -146,6 +160,29 @@ export interface NegativeReview {
   keywords: string[];
   originalText: string;
   priority: '🔴 높음' | '🟡 중간' | '🟢 낮음';
+  // 신규 필드 (optional)
+  reviewUrl?: string;
+  imageUrl?: string;
+}
+
+// 부정리뷰 매장 분석 타입
+export interface NegativeStoreAnalysis {
+  storeName: string;
+  totalNegativeReviews: number;
+  ratingBreakdown: {
+    rating1: number;
+    rating2: number;
+    rating3: number;
+    rating4: number;
+  };
+  topNegativeKeywords: string[];
+  sampleReviews: Array<{
+    reviewText: string;
+    rating: number;
+    keywords: string[];
+    reviewUrl?: string;
+    imageUrl?: string;
+  }>;
 }
 
 export interface AIInsights {
@@ -182,6 +219,8 @@ export interface BrandWeeklyAggregation {
   } | null;
   // AI 인사이트
   aiInsights?: AIInsights;
+  // 부정리뷰 매장 분석 (TOP 10)
+  negativeStoreAnalysis: NegativeStoreAnalysis[];
 }
 
 export interface WeeklyReportResult {

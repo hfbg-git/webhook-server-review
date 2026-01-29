@@ -165,10 +165,10 @@ async function createDashboardTab(spreadsheetId, aggregation) {
         values.push([`${i + 1}위`, `${kw.keyword} (${kw.totalCount}건)`]);
     });
     values.push([]);
-    values.push(['⚠️ 주의 키워드 (부정 연관)']);
-    // 이슈 키워드 추가
-    aggregation.issueKeywords.slice(0, 3).forEach((kw, i) => {
-        values.push([`${i + 1}위`, `${kw.keyword} (${kw.totalCount}건)`]);
+    values.push(['⚠️ 주의 키워드 (부정 연관) TOP 10']);
+    // 이슈 키워드 추가 - 10개로 확장
+    aggregation.issueKeywords.slice(0, 10).forEach((kw, i) => {
+        values.push([`${i + 1}위`, `${kw.keyword} (${kw.totalCount}건)`, kw.sentimentRatio]);
     });
     // AI 인사이트 추가
     if (aggregation.aiInsights) {
@@ -278,6 +278,8 @@ async function createNegativeReviewsTab(spreadsheetId, aggregation) {
         'keywords',
         'original_text',
         'priority',
+        'review_url',
+        'image_url',
     ];
     const values = [headers];
     for (const review of aggregation.negativeReviews) {
@@ -290,15 +292,48 @@ async function createNegativeReviewsTab(spreadsheetId, aggregation) {
             review.keywords.join(', '),
             review.originalText,
             review.priority,
+            review.reviewUrl || '',
+            review.imageUrl || '',
         ]);
     }
     await writeToSheet(spreadsheetId, '부정 리뷰 상세!A1', values);
 }
 /**
+ * 부정리뷰 매장 분석 탭 생성 (TOP 10)
+ */
+async function createNegativeStoreAnalysisTab(spreadsheetId, aggregation) {
+    await addSheet(spreadsheetId, '부정리뷰 매장분석', 4);
+    const headers = [
+        'rank',
+        'store_name',
+        'total_negative',
+        'rating_breakdown',
+        'top_negative_keywords',
+        'sample_review',
+        'review_url',
+        'image_url',
+    ];
+    const values = [headers];
+    aggregation.negativeStoreAnalysis.forEach((store, index) => {
+        const ratingStr = `1점(${store.ratingBreakdown.rating1}개), 2점(${store.ratingBreakdown.rating2}개), 3점(${store.ratingBreakdown.rating3}개), 4점(${store.ratingBreakdown.rating4}개)`;
+        values.push([
+            index + 1,
+            store.storeName,
+            store.totalNegativeReviews,
+            ratingStr,
+            store.topNegativeKeywords.join(', '),
+            store.sampleReviews[0]?.reviewText || '',
+            store.sampleReviews[0]?.reviewUrl || '',
+            store.sampleReviews[0]?.imageUrl || '',
+        ]);
+    });
+    await writeToSheet(spreadsheetId, '부정리뷰 매장분석!A1', values);
+}
+/**
  * 플랫폼별 분석 탭 생성
  */
 async function createPlatformAnalysisTab(spreadsheetId, aggregation) {
-    await addSheet(spreadsheetId, '플랫폼별 분석', 4);
+    await addSheet(spreadsheetId, '플랫폼별 분석', 5);
     const headers = [
         'platform',
         'total_reviews',
@@ -328,7 +363,7 @@ async function createPlatformAnalysisTab(spreadsheetId, aggregation) {
  * 원본 데이터 탭 생성
  */
 async function createRawDataTab(spreadsheetId, aggregation) {
-    await addSheet(spreadsheetId, '원본 데이터', 5);
+    await addSheet(spreadsheetId, '원본 데이터', 6);
     const headers = [
         'received_at',
         'store_name',
@@ -369,6 +404,7 @@ async function createBrandWeeklyReportSheet(aggregation, logger) {
     await createStoreAnalysisTab(spreadsheetId, aggregation);
     await createKeywordAnalysisTab(spreadsheetId, aggregation);
     await createNegativeReviewsTab(spreadsheetId, aggregation);
+    await createNegativeStoreAnalysisTab(spreadsheetId, aggregation);
     await createPlatformAnalysisTab(spreadsheetId, aggregation);
     await createRawDataTab(spreadsheetId, aggregation);
     // 4. 기본 Sheet1 삭제

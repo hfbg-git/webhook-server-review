@@ -9,6 +9,7 @@ import {
   StoreStat,
   PlatformStat,
   NegativeReview,
+  NegativeStoreAnalysis,
   BrandWeeklyAggregation,
   WeekRange,
 } from '../types/index.js';
@@ -225,7 +226,7 @@ async function getReviewsFromSheet(spreadsheetId: string): Promise<WeeklyReviewR
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${REVIEWS_TAB}!A2:O`,
+    range: `${REVIEWS_TAB}!A2:Q`,
   });
 
   const rows = response.data.values || [];
@@ -275,6 +276,8 @@ async function getReviewsFromSheet(spreadsheetId: string): Promise<WeeklyReviewR
       processedAt: row[13] || '',
       aiStatus: row[14] || '',
       rowIndex: i + 2,
+      reviewUrl: row[15] || '',
+      imageUrl: row[16] || '',
     });
   }
 
@@ -633,6 +636,8 @@ function extractNegativeReviews(reviews: WeeklyReviewRow[]): NegativeReview[] {
         keywords: review.keywords,
         originalText: review.weeklyData?.original_text || review.reviewText,
         priority,
+        reviewUrl: review.reviewUrl || review.weeklyData?.reviewUrl,
+        imageUrl: review.imageUrl || review.weeklyData?.imageUrl,
       };
     })
     .sort((a, b) => {
@@ -640,6 +645,69 @@ function extractNegativeReviews(reviews: WeeklyReviewRow[]): NegativeReview[] {
       const priorityOrder = { '🔴 높음': 0, '🟡 중간': 1, '🟢 낮음': 2 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];
     });
+}
+
+/**
+ * 부정리뷰 매장별 분석 (TOP 10)
+ */
+function analyzeNegativeStores(reviews: WeeklyReviewRow[]): NegativeStoreAnalysis[] {
+  const storeMap = new Map<string, {
+    negativeReviews: WeeklyReviewRow[];
+    ratingBreakdown: { rating1: number; rating2: number; rating3: number; rating4: number };
+  }>();
+
+  // 부정 리뷰만 필터링하여 매장별 그룹화
+  const negativeReviews = reviews.filter(r => r.sentiment === '부정');
+
+  for (const review of negativeReviews) {
+    if (!storeMap.has(review.storeName)) {
+      storeMap.set(review.storeName, {
+        negativeReviews: [],
+        ratingBreakdown: { rating1: 0, rating2: 0, rating3: 0, rating4: 0 },
+      });
+    }
+
+    const stat = storeMap.get(review.storeName)!;
+    stat.negativeReviews.push(review);
+
+    // 별점별 카운트
+    if (review.rating === 1) stat.ratingBreakdown.rating1++;
+    else if (review.rating === 2) stat.ratingBreakdown.rating2++;
+    else if (review.rating === 3) stat.ratingBreakdown.rating3++;
+    else if (review.rating === 4) stat.ratingBreakdown.rating4++;
+  }
+
+  // 부정 리뷰 수 기준 정렬, TOP 10
+  return Array.from(storeMap.entries())
+    .map(([storeName, stat]) => {
+      // 해당 매장의 부정 키워드 집계
+      const keywordCount = new Map<string, number>();
+      for (const review of stat.negativeReviews) {
+        for (const kw of review.keywords) {
+          keywordCount.set(kw, (keywordCount.get(kw) || 0) + 1);
+        }
+      }
+      const topNegativeKeywords = Array.from(keywordCount.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([k]) => k);
+
+      return {
+        storeName,
+        totalNegativeReviews: stat.negativeReviews.length,
+        ratingBreakdown: stat.ratingBreakdown,
+        topNegativeKeywords,
+        sampleReviews: stat.negativeReviews.slice(0, 3).map(r => ({
+          reviewText: r.reviewText,
+          rating: r.rating,
+          keywords: r.keywords,
+          reviewUrl: r.reviewUrl,
+          imageUrl: r.imageUrl,
+        })),
+      };
+    })
+    .sort((a, b) => b.totalNegativeReviews - a.totalNegativeReviews)
+    .slice(0, 10);
 }
 
 /**
@@ -668,6 +736,7 @@ export async function aggregateBrandWeeklyData(
   const storeStats = calculateStoreStats(reviews);
   const platformStats = calculatePlatformStats(reviews);
   const negativeReviews = extractNegativeReviews(reviews);
+  const negativeStoreAnalysis = analyzeNegativeStores(reviews);
 
   // 평균 별점 계산
   const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
@@ -678,10 +747,10 @@ export async function aggregateBrandWeeklyData(
     .filter((k) => k.mainSentiment === '긍정')
     .slice(0, 5);
 
-  // 이슈 키워드 (부정 중심)
+  // 이슈 키워드 (부정 중심) - 10개로 확장
   const issueKeywords = keywordStats
     .filter((k) => k.mainSentiment === '부정')
-    .slice(0, 5);
+    .slice(0, 10);
 
   // 지난주 대비 비교
   let lastWeekComparison = null;
@@ -723,5 +792,6 @@ export async function aggregateBrandWeeklyData(
     platformStats,
     rawData: reviews,
     lastWeekComparison,
+    negativeStoreAnalysis,
   };
 }

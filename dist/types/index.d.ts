@@ -5,6 +5,8 @@ export interface WebhookPayload {
     rating: number;
     review_text: string;
     created_at: string;
+    review_url?: string;
+    image_url?: string;
 }
 export interface ParsedReview {
     receivedAt: string;
@@ -16,6 +18,8 @@ export interface ParsedReview {
     reviewId: string;
     reviewText: string;
     status: 'NEW';
+    reviewUrl?: string;
+    imageUrl?: string;
 }
 export interface WebhookResponse {
     ok: boolean;
@@ -31,7 +35,7 @@ export interface SheetInfo {
     spreadsheetId: string;
     sheetName: string;
 }
-export declare const REVIEWS_HEADERS: readonly ["received_at", "review_created_at", "brand_name", "store_name", "platform", "rating", "review_id", "review_text", "status", "p1_sentiment", "p2_summary", "p3_keywords", "p4_weekly_data", "processed_at", "ai_status"];
+export declare const REVIEWS_HEADERS: readonly ["received_at", "review_created_at", "brand_name", "store_name", "platform", "rating", "review_id", "review_text", "status", "p1_sentiment", "p2_summary", "p3_keywords", "p4_weekly_data", "processed_at", "ai_status", "review_url", "image_url"];
 export interface AIProcessingResult {
     p1Sentiment: '긍정' | '부정' | '중립';
     p2Summary: string;
@@ -46,6 +50,8 @@ export interface WeeklyData {
     summary: string;
     rating: number;
     original_text?: string;
+    reviewUrl?: string;
+    imageUrl?: string;
 }
 export type ReviewHeader = (typeof REVIEWS_HEADERS)[number];
 export interface WeeklyReviewRow {
@@ -65,6 +71,8 @@ export interface WeeklyReviewRow {
     processedAt: string;
     aiStatus: string;
     rowIndex: number;
+    reviewUrl?: string;
+    imageUrl?: string;
 }
 export interface SentimentDistribution {
     positive: number;
@@ -115,6 +123,26 @@ export interface NegativeReview {
     keywords: string[];
     originalText: string;
     priority: '🔴 높음' | '🟡 중간' | '🟢 낮음';
+    reviewUrl?: string;
+    imageUrl?: string;
+}
+export interface NegativeStoreAnalysis {
+    storeName: string;
+    totalNegativeReviews: number;
+    ratingBreakdown: {
+        rating1: number;
+        rating2: number;
+        rating3: number;
+        rating4: number;
+    };
+    topNegativeKeywords: string[];
+    sampleReviews: Array<{
+        reviewText: string;
+        rating: number;
+        keywords: string[];
+        reviewUrl?: string;
+        imageUrl?: string;
+    }>;
 }
 export interface AIInsights {
     summary: string;
@@ -147,6 +175,7 @@ export interface BrandWeeklyAggregation {
         negativeRateChange: string;
     } | null;
     aiInsights?: AIInsights;
+    negativeStoreAnalysis: NegativeStoreAnalysis[];
 }
 export interface WeeklyReportResult {
     success: boolean;

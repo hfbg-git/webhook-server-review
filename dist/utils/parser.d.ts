@@ -6,6 +6,8 @@ export interface ParsedData {
     rating: string;
     reviewText: string;
     reviewCreatedAt: string;
+    reviewUrl: string;
+    imageUrl: string;
 }
 export declare function parseWebhookPayload(payload: WebhookPayload): ParsedData;
 //# sourceMappingURL=parser.d.ts.map

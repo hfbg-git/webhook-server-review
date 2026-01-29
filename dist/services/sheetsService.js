@@ -40,7 +40,7 @@ async function ensureHeaders(spreadsheetId) {
     const sheets = (0, googleAuth_js_1.getSheetsClient)();
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${REVIEWS_TAB}!A1:O1`,
+        range: `${REVIEWS_TAB}!A1:Q1`,
     });
     const firstRow = response.data.values?.[0];
     if (!firstRow || firstRow.length === 0) {
@@ -83,10 +83,12 @@ async function appendReview(spreadsheetId, review) {
         '', // M: p4_weekly_data (AI 처리)
         '', // N: processed_at (AI 처리)
         '', // O: ai_status (AI 처리)
+        review.reviewUrl || '', // P: review_url
+        review.imageUrl || '', // Q: image_url
     ];
     await sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: `${REVIEWS_TAB}!A:O`,
+        range: `${REVIEWS_TAB}!A:Q`,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
@@ -98,7 +100,7 @@ async function getNewReviews(spreadsheetId, limit) {
     const sheets = (0, googleAuth_js_1.getSheetsClient)();
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${REVIEWS_TAB}!A2:O`,
+        range: `${REVIEWS_TAB}!A2:Q`,
     });
     const rows = response.data.values || [];
     const newReviews = [];

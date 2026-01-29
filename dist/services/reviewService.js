@@ -51,6 +51,8 @@ async function processReview(payload, logger) {
         reviewId,
         reviewText: parsed.reviewText,
         status: 'NEW',
+        reviewUrl: parsed.reviewUrl,
+        imageUrl: parsed.imageUrl,
     };
     // Append to sheet
     await (0, sheetsService_js_1.appendReview)(spreadsheetId, review);

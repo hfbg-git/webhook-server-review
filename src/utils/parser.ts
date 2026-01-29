@@ -7,6 +7,8 @@ export interface ParsedData {
   rating: string;
   reviewText: string;
   reviewCreatedAt: string;
+  reviewUrl: string;
+  imageUrl: string;
 }
 
 export function parseWebhookPayload(payload: WebhookPayload): ParsedData {
@@ -17,5 +19,7 @@ export function parseWebhookPayload(payload: WebhookPayload): ParsedData {
     rating: String(payload.rating ?? ''),
     reviewText: payload.review_text || '',
     reviewCreatedAt: payload.created_at || '',
+    reviewUrl: payload.review_url || '',
+    imageUrl: payload.image_url || '',
   };
 }

@@ -72,6 +72,8 @@ export async function processReview(
     reviewId,
     reviewText: parsed.reviewText,
     status: 'NEW',
+    reviewUrl: parsed.reviewUrl,
+    imageUrl: parsed.imageUrl,
   };
 
   // Append to sheet
