@@ -6,6 +6,7 @@ exports.generateWeeklyReportsForDate = generateWeeklyReportsForDate;
 const weeklyDataAggregator_js_1 = require("./weeklyDataAggregator.js");
 const weeklySheetBuilder_js_1 = require("./weeklySheetBuilder.js");
 const openaiService_js_1 = require("./openaiService.js");
+const brandRegistry_js_1 = require("./brandRegistry.js");
 /**
  * 2주 전 기간 계산 (지난주 대비 비교용)
  */
@@ -112,6 +113,9 @@ async function generateSingleBrandReport(brandName, weekLabel, currentWeekRange,
  */
 async function generateWeeklyReports(logger) {
     const startTime = Date.now();
+    // 브랜드 캐시 강제 로드 (정규화를 위해 필수)
+    await (0, brandRegistry_js_1.loadBrandCache)(true);
+    logger.info({ msg: 'Brand cache loaded for weekly report generation' });
     // 기간 계산
     const currentWeekRange = (0, weeklyDataAggregator_js_1.getLastWeekRange)();
     const lastWeekRange = getTwoWeeksAgoRange(currentWeekRange);
@@ -153,6 +157,8 @@ async function generateWeeklyReports(logger) {
  * 특정 브랜드 주간 리포트 생성
  */
 async function generateBrandWeeklyReport(brandName, logger, targetDate) {
+    // 브랜드 캐시 강제 로드 (정규화를 위해 필수)
+    await (0, brandRegistry_js_1.loadBrandCache)(true);
     // 기간 계산
     const currentWeekRange = targetDate
         ? (0, weeklyDataAggregator_js_1.getWeekRangeForDate)(targetDate)
@@ -165,6 +171,9 @@ async function generateBrandWeeklyReport(brandName, logger, targetDate) {
  */
 async function generateWeeklyReportsForDate(targetDate, logger) {
     const startTime = Date.now();
+    // 브랜드 캐시 강제 로드 (정규화를 위해 필수)
+    await (0, brandRegistry_js_1.loadBrandCache)(true);
+    logger.info({ msg: 'Brand cache loaded for weekly report generation' });
     // 기간 계산
     const currentWeekRange = (0, weeklyDataAggregator_js_1.getWeekRangeForDate)(targetDate);
     const lastWeekRange = getTwoWeeksAgoRange(currentWeekRange);

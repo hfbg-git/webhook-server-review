@@ -183,8 +183,13 @@ async function updateAliases(spreadsheetId, normalizedKey, newAlias) {
 }
 /**
  * 브랜드 레지스트리 캐시 로드
+ * @param forceReload true면 캐시 상태와 무관하게 다시 로드
  */
-async function loadBrandCache() {
+async function loadBrandCache(forceReload = false) {
+    // 이미 로드됐고 강제 리로드 아니면 스킵
+    if (cacheLoaded && !forceReload) {
+        return;
+    }
     try {
         const spreadsheetId = await getCurrentSheetId();
         await ensureRegistryTab(spreadsheetId);
@@ -207,7 +212,9 @@ async function loadBrandCache() {
     }
     catch (error) {
         console.warn('Failed to load brand registry, will use fallback:', error.message);
-        cacheLoaded = true; // 실패해도 진행
+        // 시트가 없어서 실패한 경우에도 빈 캐시로 진행
+        // 첫 웹훅 수신 시 getStandardBrandName()에서 탭 생성됨
+        cacheLoaded = true;
     }
 }
 /**

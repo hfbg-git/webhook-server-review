@@ -6,6 +6,7 @@ const hash_js_1 = require("../utils/hash.js");
 const lruCache_js_1 = require("../utils/lruCache.js");
 const driveService_js_1 = require("./driveService.js");
 const sheetsService_js_1 = require("./sheetsService.js");
+const brandRegistry_js_1 = require("./brandRegistry.js");
 async function processReview(payload, logger) {
     const parsed = (0, parser_js_1.parseWebhookPayload)(payload);
     const reviewId = (0, hash_js_1.generateReviewId)(parsed.brandName, parsed.storeName, parsed.platform, parsed.rating, parsed.reviewText, parsed.reviewCreatedAt);
@@ -41,10 +42,12 @@ async function processReview(payload, logger) {
     }
     // Build review record (한국 시간)
     const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    // 브랜드명 정규화 (앞 3글자 매칭으로 표준화)
+    const standardBrandName = await (0, brandRegistry_js_1.getStandardBrandName)(parsed.brandName);
     const review = {
         receivedAt: now,
         reviewCreatedAt: parsed.reviewCreatedAt,
-        brandName: parsed.brandName,
+        brandName: standardBrandName,
         storeName: parsed.storeName,
         platform: parsed.platform,
         rating: parsed.rating,

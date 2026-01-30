@@ -1,7 +1,8 @@
 /**
  * 브랜드 레지스트리 캐시 로드
+ * @param forceReload true면 캐시 상태와 무관하게 다시 로드
  */
-export declare function loadBrandCache(): Promise<void>;
+export declare function loadBrandCache(forceReload?: boolean): Promise<void>;
 /**
  * 표준 브랜드명 조회/등록 (앞 3글자 매칭)
  * @param rawBrandName 원본 브랜드명 (지점명, 플랫폼 제거 후)
