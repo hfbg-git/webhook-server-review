@@ -227,9 +227,9 @@ async function getStandardBrandName(rawBrandName) {
         return '';
     const key = normalizeKey(rawBrandName);
     const prefix = getPrefix3Key(rawBrandName);
-    // 캐시에서 앞 3글자가 같은 브랜드 찾기
+    // 캐시에서 앞 3글자가 같은 브랜드 찾기 (공백 제거 후 비교)
     for (const [cachedKey, standard] of brandCache.entries()) {
-        const cachedPrefix = cachedKey.slice(0, 3);
+        const cachedPrefix = getPrefix3Key(cachedKey);
         if (cachedPrefix === prefix) {
             // 새 변형이면 별칭에 추가 (비동기)
             if (cachedKey !== key) {
@@ -276,9 +276,9 @@ function getStandardBrandNameSync(rawBrandName) {
     if (!rawBrandName)
         return '';
     const prefix = getPrefix3Key(rawBrandName);
-    // 캐시에서 앞 3글자가 같은 브랜드 찾기
+    // 캐시에서 앞 3글자가 같은 브랜드 찾기 (공백 제거 후 비교)
     for (const [key, standard] of brandCache.entries()) {
-        const keyPrefix = key.slice(0, 3);
+        const keyPrefix = getPrefix3Key(key);
         if (keyPrefix === prefix) {
             return standard;
         }
