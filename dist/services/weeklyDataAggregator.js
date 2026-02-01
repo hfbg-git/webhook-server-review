@@ -146,6 +146,36 @@ function parseKoreanDate(dateStr) {
     }
 }
 /**
+ * Levenshtein Distance 계산
+ */
+function levenshteinDistance(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= a.length; i++)
+        matrix[i] = [i];
+    for (let j = 0; j <= b.length; j++)
+        matrix[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+        }
+    }
+    return matrix[a.length][b.length];
+}
+/**
+ * 문자열 유사도 계산 (0~1), 공백 제거 후 비교
+ */
+function calculateSimilarity(a, b) {
+    const normA = a.replace(/\s+/g, '');
+    const normB = b.replace(/\s+/g, '');
+    if (normA === normB)
+        return 1;
+    const maxLen = Math.max(normA.length, normB.length);
+    if (maxLen === 0)
+        return 1;
+    return 1 - levenshteinDistance(normA, normB) / maxLen;
+}
+/**
  * brand_name에서 순수 브랜드명 추출
  * 예: "화락바베큐치킨 원주단구점_배달의민족" → "화락바베큐치킨"
  * 예: "튀긴치킨 싫어서 구운치킨만 파는 집 세종종촌점_쿠팡" → "튀긴치킨 싫어서 구운치킨만 파는 집"
@@ -257,16 +287,27 @@ async function getWeeklyReviewData(startDate, endDate) {
     return allReviews;
 }
 /**
- * 브랜드별로 리뷰 그룹화
+ * 브랜드별로 리뷰 그룹화 (유사도 50% 이상이면 같은 브랜드로 처리)
  */
 function groupByBrand(reviews) {
     const brandMap = new Map();
+    const SIMILARITY_THRESHOLD = 0.5;
     for (const review of reviews) {
         const brand = review.brandName;
-        if (!brandMap.has(brand)) {
-            brandMap.set(brand, []);
+        let matchedKey = null;
+        // 기존 키들과 유사도 비교
+        for (const existingKey of brandMap.keys()) {
+            if (calculateSimilarity(brand, existingKey) >= SIMILARITY_THRESHOLD) {
+                matchedKey = existingKey;
+                break;
+            }
         }
-        brandMap.get(brand).push(review);
+        if (matchedKey) {
+            brandMap.get(matchedKey).push(review);
+        }
+        else {
+            brandMap.set(brand, [review]);
+        }
     }
     return brandMap;
 }

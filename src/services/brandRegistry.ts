@@ -300,14 +300,15 @@ export async function getStandardBrandName(rawBrandName: string): Promise<string
       return existing.standard;
     }
 
-    // 새 브랜드 등록 (첫 입력 형태를 표준으로)
-    await registerBrand(spreadsheetId, key, rawBrandName);
-    brandCache.set(key, rawBrandName);
-    console.log(`New brand registered: ${rawBrandName} (key: ${key}, prefix: ${prefix})`);
-    return rawBrandName;
+    // 새 브랜드 등록 (공백 제거한 형태를 표준으로)
+    const normalizedName = normalizeKey(rawBrandName);
+    await registerBrand(spreadsheetId, key, normalizedName);
+    brandCache.set(key, normalizedName);
+    console.log(`New brand registered: ${normalizedName} (key: ${key}, prefix: ${prefix})`);
+    return normalizedName;
   } catch (error) {
-    console.warn('Brand registry error, using raw name:', (error as Error).message);
-    return rawBrandName;
+    console.warn('Brand registry error, using normalized name:', (error as Error).message);
+    return normalizeKey(rawBrandName);
   }
 }
 
@@ -318,6 +319,7 @@ export async function getStandardBrandName(rawBrandName: string): Promise<string
 export function getStandardBrandNameSync(rawBrandName: string): string {
   if (!rawBrandName) return '';
 
+  const normalizedName = normalizeKey(rawBrandName);  // 공백 제거
   const prefix = getPrefix3Key(rawBrandName);
 
   // 캐시에서 앞 3글자가 같은 브랜드 찾기 (공백 제거 후 비교)
@@ -328,8 +330,8 @@ export function getStandardBrandNameSync(rawBrandName: string): string {
     }
   }
 
-  // 없으면 원본 반환
-  return rawBrandName;
+  // 캐시에 없으면 공백 제거한 정규화된 이름 반환
+  return normalizedName;
 }
 
 /**

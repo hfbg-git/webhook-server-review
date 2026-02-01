@@ -12,7 +12,7 @@ export declare function getWeekRangeForDate(targetDate: Date): WeekRange;
  */
 export declare function getWeeklyReviewData(startDate: Date, endDate: Date): Promise<WeeklyReviewRow[]>;
 /**
- * 브랜드별로 리뷰 그룹화
+ * 브랜드별로 리뷰 그룹화 (유사도 50% 이상이면 같은 브랜드로 처리)
  */
 export declare function groupByBrand(reviews: WeeklyReviewRow[]): Map<string, WeeklyReviewRow[]>;
 /**
