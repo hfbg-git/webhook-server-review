@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MAIN_BRAND_PREFIXES = void 0;
+exports.isMainBrand = isMainBrand;
 exports.loadBrandCache = loadBrandCache;
 exports.getStandardBrandName = getStandardBrandName;
 exports.getStandardBrandNameSync = getStandardBrandNameSync;
@@ -8,6 +10,19 @@ exports.seedInitialBrands = seedInitialBrands;
 const googleAuth_js_1 = require("./googleAuth.js");
 const BRAND_REGISTRY_TAB = 'BrandRegistry';
 const RAW_SHEET_NAME_PREFIX = process.env.RAW_SHEET_NAME_PREFIX || 'ReviewDoctor_Raw_';
+// 메인 브랜드 목록 (앞 3글자 기준)
+exports.MAIN_BRAND_PREFIXES = [
+    '화락바', // 화락바베큐치킨
+    '튀긴치', // 튀긴치킨 싫어서 구운치킨만 파는 집
+    '닭다리', // 닭다리 순살만 팬다
+];
+/**
+ * 메인 브랜드 여부 확인
+ */
+function isMainBrand(brandName) {
+    const prefix = brandName.replace(/\s/g, '').slice(0, 3);
+    return exports.MAIN_BRAND_PREFIXES.includes(prefix);
+}
 // 메모리 캐시 (서버 시작 시 로드)
 let brandCache = new Map();
 let cacheLoaded = false;

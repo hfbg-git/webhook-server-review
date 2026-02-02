@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBrandWeeklyReportSheet = createBrandWeeklyReportSheet;
 const googleAuth_js_1 = require("./googleAuth.js");
+const brandRegistry_js_1 = require("./brandRegistry.js");
 const WEEKLY_REPORT_FOLDER_ID = process.env.WEEKLY_REPORT_FOLDER_ID || process.env.RAW_SHEETS_FOLDER_ID || '';
 /**
  * 폴더 찾기 또는 생성
@@ -35,7 +36,7 @@ async function getOrCreateFolder(parentId, folderName) {
 }
 /**
  * 브랜드별 리포트 폴더 경로 생성
- * WeeklyReports/{브랜드명}/{연도}/{월}
+ * WeeklyReports/{메인브랜드|서브브랜드}/{브랜드명}/{연도}/{월}
  */
 async function getOrCreateBrandReportFolder(brandName, weekLabel) {
     // weekLabel 형식: "2025-01-06_2025-01-12"
@@ -43,11 +44,14 @@ async function getOrCreateBrandReportFolder(brandName, weekLabel) {
     const [year, month] = startDate.split('-');
     // 1. WeeklyReports 폴더
     const weeklyReportsFolderId = await getOrCreateFolder(WEEKLY_REPORT_FOLDER_ID, 'WeeklyReports');
-    // 2. 브랜드 폴더
-    const brandFolderId = await getOrCreateFolder(weeklyReportsFolderId, brandName);
-    // 3. 연도 폴더
+    // 2. 메인/서브 브랜드 카테고리 폴더
+    const categoryFolder = (0, brandRegistry_js_1.isMainBrand)(brandName) ? '메인브랜드' : '서브브랜드';
+    const categoryFolderId = await getOrCreateFolder(weeklyReportsFolderId, categoryFolder);
+    // 3. 브랜드 폴더
+    const brandFolderId = await getOrCreateFolder(categoryFolderId, brandName);
+    // 4. 연도 폴더
     const yearFolderId = await getOrCreateFolder(brandFolderId, year);
-    // 4. 월 폴더
+    // 5. 월 폴더
     const monthFolderId = await getOrCreateFolder(yearFolderId, `${month}월`);
     return monthFolderId;
 }

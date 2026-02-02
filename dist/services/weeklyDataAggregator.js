@@ -11,6 +11,15 @@ const brandRegistry_js_1 = require("./brandRegistry.js");
 const ROOT_FOLDER_ID = process.env.RAW_SHEETS_FOLDER_ID || '';
 const SHEET_PREFIX = process.env.RAW_SHEET_NAME_PREFIX || 'ReviewDoctor_Raw_';
 const REVIEWS_TAB = 'Reviews';
+// 키워드 필터링 상수
+const PLATFORM_KEYWORDS = ['배달의민족', '배민', '쿠팡이츠', '쿠팡', '요기요', '위메프오'];
+const GENERIC_NEGATIVE_KEYWORDS = [
+    '실망', '불만', '부정', '별로', '나쁨', '싫음', '최악', '짜증',
+    '화남', '분노', '후회', '아쉬움', '아쉽', '그냥', '보통'
+];
+const GENERIC_POSITIVE_KEYWORDS = [
+    '좋음', '만족', '최고', '굿', '좋아요', '추천'
+];
 /**
  * 지난 주 월요일 00:00:00 ~ 일요일 23:59:59 (KST) 기간 계산
  */
@@ -407,9 +416,51 @@ function calculateKeywordStats(reviews, lastWeekKeywords) {
     });
 }
 /**
+ * 키워드 제외 여부 판단 (브랜드명, 플랫폼명 필터링)
+ */
+function shouldExcludeKeyword(keyword, brandName) {
+    const keywordLower = keyword.toLowerCase();
+    const brandLower = brandName.toLowerCase().replace(/\s/g, '');
+    // 플랫폼명 체크
+    if (PLATFORM_KEYWORDS.some(p => keywordLower.includes(p.toLowerCase()))) {
+        return true;
+    }
+    // 브랜드명 체크 (공백 제거 후 비교)
+    const keywordNoSpace = keywordLower.replace(/\s/g, '');
+    if (keywordNoSpace.includes(brandLower) || brandLower.includes(keywordNoSpace)) {
+        return true;
+    }
+    // 브랜드명 단어 분리 체크 (2글자 이상)
+    const brandWords = brandName.split(/\s+/).filter(w => w.length >= 2);
+    if (brandWords.some(w => keywordLower === w.toLowerCase())) {
+        return true;
+    }
+    return false;
+}
+/**
+ * 키워드 필터링 (브랜드명, 플랫폼명, 일반적 단어 제외)
+ */
+function filterKeywords(keywords, brandName, filterType) {
+    const genericKeywords = filterType === 'negative'
+        ? GENERIC_NEGATIVE_KEYWORDS
+        : GENERIC_POSITIVE_KEYWORDS;
+    return keywords.filter(kw => {
+        const keywordLower = kw.keyword.toLowerCase();
+        // 일반적 단어 체크
+        if (genericKeywords.some(g => keywordLower === g.toLowerCase())) {
+            return false;
+        }
+        // 브랜드명/플랫폼명 체크
+        if (shouldExcludeKeyword(kw.keyword, brandName)) {
+            return false;
+        }
+        return true;
+    });
+}
+/**
  * 매장별 통계 계산
  */
-function calculateStoreStats(reviews) {
+function calculateStoreStats(reviews, brandName) {
     const storeMap = new Map();
     for (const review of reviews) {
         const store = review.storeName;
@@ -443,7 +494,7 @@ function calculateStoreStats(reviews) {
         const positiveRate = `${((stat.positive / total) * 100).toFixed(1)}%`;
         const negativeRate = `${((stat.negative / total) * 100).toFixed(1)}%`;
         const avgRating = Math.round((stat.totalRating / total) * 10) / 10;
-        // 상위 키워드 추출
+        // 상위 키워드 추출 (브랜드명, 플랫폼명 제외)
         const keywordCount = new Map();
         for (const review of stat.reviews) {
             for (const keyword of review.keywords) {
@@ -452,6 +503,7 @@ function calculateStoreStats(reviews) {
         }
         const topKeywords = Array.from(keywordCount.entries())
             .sort((a, b) => b[1] - a[1])
+            .filter(([k]) => !shouldExcludeKeyword(k, brandName))
             .slice(0, 3)
             .map(([k]) => k);
         // 조치 필요 여부 판단 (부정 비율 40% 이상)
@@ -475,7 +527,7 @@ function calculateStoreStats(reviews) {
 /**
  * 플랫폼별 통계 계산
  */
-function calculatePlatformStats(reviews) {
+function calculatePlatformStats(reviews, brandName) {
     const platformMap = new Map();
     for (const review of reviews) {
         const platform = review.platform;
@@ -508,7 +560,7 @@ function calculatePlatformStats(reviews) {
         const total = stat.reviews.length;
         const positiveRate = `${((stat.positive / total) * 100).toFixed(1)}%`;
         const avgRating = Math.round((stat.totalRating / total) * 10) / 10;
-        // 상위 키워드 추출
+        // 상위 키워드 추출 (브랜드명, 플랫폼명 제외)
         const keywordCount = new Map();
         for (const review of stat.reviews) {
             for (const keyword of review.keywords) {
@@ -517,6 +569,7 @@ function calculatePlatformStats(reviews) {
         }
         const topKeywords = Array.from(keywordCount.entries())
             .sort((a, b) => b[1] - a[1])
+            .filter(([k]) => !shouldExcludeKeyword(k, brandName))
             .slice(0, 3)
             .map(([k]) => k);
         return {
@@ -645,21 +698,21 @@ async function aggregateBrandWeeklyData(brandName, reviews, weekLabel, lastWeekR
         }
     }
     const keywordStats = calculateKeywordStats(reviews, lastWeekKeywordMap);
-    const storeStats = calculateStoreStats(reviews);
-    const platformStats = calculatePlatformStats(reviews);
+    const storeStats = calculateStoreStats(reviews, brandName);
+    const platformStats = calculatePlatformStats(reviews, brandName);
     const negativeReviews = extractNegativeReviews(reviews);
     const negativeStoreAnalysis = analyzeNegativeStores(reviews);
     // 평균 별점 계산
     const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
     const avgRating = Math.round((totalRating / (reviews.length || 1)) * 10) / 10;
-    // TOP 키워드 (긍정 중심)
-    const topKeywords = keywordStats
-        .filter((k) => k.mainSentiment === '긍정')
-        .slice(0, 5);
-    // 이슈 키워드 (부정 중심) - 10개로 확장
-    const issueKeywords = keywordStats
-        .filter((k) => k.mainSentiment === '부정')
-        .slice(0, 10);
+    // TOP 키워드 (긍정 중심) - 브랜드명, 플랫폼명, 일반적 긍정 단어 제외
+    const positiveKeywords = keywordStats.filter((k) => k.mainSentiment === '긍정');
+    const filteredPositiveKeywords = filterKeywords(positiveKeywords, brandName, 'positive');
+    const topKeywords = filteredPositiveKeywords.slice(0, 5);
+    // 이슈 키워드 (부정 중심) - 브랜드명, 플랫폼명, 일반적 부정 단어 제외
+    const negativeKeywords = keywordStats.filter((k) => k.mainSentiment === '부정');
+    const filteredNegativeKeywords = filterKeywords(negativeKeywords, brandName, 'negative');
+    const issueKeywords = filteredNegativeKeywords.slice(0, 10);
     // 지난주 대비 비교
     let lastWeekComparison = null;
     if (lastWeekReviews && lastWeekReviews.length > 0) {

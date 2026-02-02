@@ -7,6 +7,8 @@ const weeklyDataAggregator_js_1 = require("./weeklyDataAggregator.js");
 const weeklySheetBuilder_js_1 = require("./weeklySheetBuilder.js");
 const openaiService_js_1 = require("./openaiService.js");
 const brandRegistry_js_1 = require("./brandRegistry.js");
+const notificationConfigService_js_1 = require("./notificationConfigService.js");
+const jandiWebhookService_js_1 = require("./jandiWebhookService.js");
 /**
  * 2주 전 기간 계산 (지난주 대비 비교용)
  */
@@ -14,6 +16,30 @@ function getTwoWeeksAgoRange(lastWeekRange) {
     const twoWeeksAgo = new Date(lastWeekRange.startDate);
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 7);
     return (0, weeklyDataAggregator_js_1.getWeekRangeForDate)(twoWeeksAgo);
+}
+/**
+ * 잔디 알림 전송 (설정된 브랜드만)
+ */
+async function sendJandiNotificationIfEnabled(brandName, aggregation, spreadsheetUrl, logger) {
+    try {
+        const notificationConfig = await (0, notificationConfigService_js_1.getNotificationConfig)(brandName);
+        if (notificationConfig && notificationConfig.enabled) {
+            const notificationSent = await (0, jandiWebhookService_js_1.sendJandiNotification)(notificationConfig.jandiWebhookUrl, aggregation, spreadsheetUrl);
+            logger.info({
+                msg: 'Jandi notification sent',
+                brandName,
+                success: notificationSent,
+            });
+        }
+    }
+    catch (error) {
+        // 알림 실패가 전체 리포트 생성을 방해하지 않도록 에러 격리
+        logger.warn({
+            msg: 'Failed to send Jandi notification',
+            brandName,
+            error: error.message,
+        });
+    }
 }
 /**
  * 단일 브랜드 주간 리포트 생성
@@ -84,6 +110,8 @@ async function generateSingleBrandReport(brandName, weekLabel, currentWeekRange,
             spreadsheetId,
             totalReviews: brandReviews.length,
         });
+        // 잔디 알림 전송 (설정된 브랜드만)
+        await sendJandiNotificationIfEnabled(brandName, aggregation, spreadsheetUrl, logger);
         return {
             success: true,
             brandName,
@@ -116,6 +144,9 @@ async function generateWeeklyReports(logger) {
     // 브랜드 캐시 강제 로드 (정규화를 위해 필수)
     await (0, brandRegistry_js_1.loadBrandCache)(true);
     logger.info({ msg: 'Brand cache loaded for weekly report generation' });
+    // 알림 설정 캐시 로드
+    await (0, notificationConfigService_js_1.loadNotificationConfigCache)(true);
+    logger.info({ msg: 'Notification config cache loaded' });
     // 기간 계산
     const currentWeekRange = (0, weeklyDataAggregator_js_1.getLastWeekRange)();
     const lastWeekRange = getTwoWeeksAgoRange(currentWeekRange);
@@ -159,6 +190,8 @@ async function generateWeeklyReports(logger) {
 async function generateBrandWeeklyReport(brandName, logger, targetDate) {
     // 브랜드 캐시 강제 로드 (정규화를 위해 필수)
     await (0, brandRegistry_js_1.loadBrandCache)(true);
+    // 알림 설정 캐시 로드
+    await (0, notificationConfigService_js_1.loadNotificationConfigCache)(true);
     // 기간 계산
     const currentWeekRange = targetDate
         ? (0, weeklyDataAggregator_js_1.getWeekRangeForDate)(targetDate)
@@ -174,6 +207,9 @@ async function generateWeeklyReportsForDate(targetDate, logger) {
     // 브랜드 캐시 강제 로드 (정규화를 위해 필수)
     await (0, brandRegistry_js_1.loadBrandCache)(true);
     logger.info({ msg: 'Brand cache loaded for weekly report generation' });
+    // 알림 설정 캐시 로드
+    await (0, notificationConfigService_js_1.loadNotificationConfigCache)(true);
+    logger.info({ msg: 'Notification config cache loaded' });
     // 기간 계산
     const currentWeekRange = (0, weeklyDataAggregator_js_1.getWeekRangeForDate)(targetDate);
     const lastWeekRange = getTwoWeeksAgoRange(currentWeekRange);

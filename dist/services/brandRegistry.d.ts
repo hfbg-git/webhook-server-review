@@ -1,3 +1,8 @@
+export declare const MAIN_BRAND_PREFIXES: string[];
+/**
+ * 메인 브랜드 여부 확인
+ */
+export declare function isMainBrand(brandName: string): boolean;
 /**
  * 브랜드 레지스트리 캐시 로드
  * @param forceReload true면 캐시 상태와 무관하게 다시 로드

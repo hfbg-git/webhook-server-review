@@ -191,4 +191,18 @@ export interface WeekRange {
     endDate: Date;
     weekLabel: string;
 }
+export interface NotificationConfig {
+    brandName: string;
+    jandiWebhookUrl: string;
+    enabled: boolean;
+    notificationLevel: 'all' | 'summary' | 'url_only';
+}
+export interface JandiWebhookMessage {
+    body: string;
+    connectColor: string;
+    connectInfo: Array<{
+        title: string;
+        description: string;
+    }>;
+}
 //# sourceMappingURL=index.d.ts.map
