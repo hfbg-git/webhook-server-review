@@ -5,77 +5,12 @@ exports.getNotificationConfig = getNotificationConfig;
 exports.getAllNotificationConfigs = getAllNotificationConfigs;
 exports.isConfigCacheLoaded = isConfigCacheLoaded;
 const googleAuth_js_1 = require("./googleAuth.js");
+const driveService_js_1 = require("./driveService.js");
+const sheetsService_js_1 = require("./sheetsService.js");
 const NOTIFICATION_CONFIG_TAB = 'NotificationConfig';
-const RAW_SHEET_NAME_PREFIX = process.env.RAW_SHEET_NAME_PREFIX || 'ReviewDoctor_Raw_';
 // 메모리 캐시
 let configCache = new Map();
 let cacheLoaded = false;
-// 현재 월 스프레드시트 ID 캐시
-let currentSheetId = null;
-/**
- * 현재 월의 스프레드시트 ID 가져오기
- */
-async function getCurrentSheetId() {
-    if (currentSheetId)
-        return currentSheetId;
-    const sheets = (0, googleAuth_js_1.getSheetsClient)();
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const sheetName = `${RAW_SHEET_NAME_PREFIX}${year}_${month}`;
-    const { google } = await import('googleapis');
-    const drive = google.drive({ version: 'v3', auth: sheets.context._options.auth });
-    const folderId = process.env.RAW_SHEETS_FOLDER_ID;
-    const response = await drive.files.list({
-        q: `name='${sheetName}' and '${folderId}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
-        fields: 'files(id)',
-        spaces: 'drive',
-    });
-    const files = response.data.files || [];
-    if (files.length > 0 && files[0].id) {
-        currentSheetId = files[0].id;
-        return currentSheetId;
-    }
-    throw new Error(`Spreadsheet not found: ${sheetName}`);
-}
-/**
- * NotificationConfig 탭 확인 및 생성
- */
-async function ensureNotificationConfigTab(spreadsheetId) {
-    const sheets = (0, googleAuth_js_1.getSheetsClient)();
-    const spreadsheet = await sheets.spreadsheets.get({
-        spreadsheetId,
-        fields: 'sheets.properties.title',
-    });
-    const existingTabs = spreadsheet.data.sheets?.map((s) => s.properties?.title) || [];
-    if (existingTabs.includes(NOTIFICATION_CONFIG_TAB)) {
-        return;
-    }
-    // 탭 생성
-    await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        requestBody: {
-            requests: [
-                {
-                    addSheet: {
-                        properties: {
-                            title: NOTIFICATION_CONFIG_TAB,
-                        },
-                    },
-                },
-            ],
-        },
-    });
-    // 헤더 추가
-    await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `${NOTIFICATION_CONFIG_TAB}!A1:D1`,
-        valueInputOption: 'RAW',
-        requestBody: {
-            values: [['brand_name', 'jandi_webhook_url', 'enabled', 'notification_level']],
-        },
-    });
-}
 /**
  * 알림 설정 캐시 로드
  */
@@ -84,8 +19,10 @@ async function loadNotificationConfigCache(forceReload = false) {
         return;
     }
     try {
-        const spreadsheetId = await getCurrentSheetId();
-        await ensureNotificationConfigTab(spreadsheetId);
+        // driveService의 검증된 함수 재사용
+        const { spreadsheetId } = await (0, driveService_js_1.getOrCreateMonthlySpreadsheet)();
+        // sheetsService의 함수 사용하여 탭 생성
+        await (0, sheetsService_js_1.ensureNotificationConfigTab)(spreadsheetId);
         const sheets = (0, googleAuth_js_1.getSheetsClient)();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,

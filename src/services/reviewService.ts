@@ -3,7 +3,7 @@ import { parseWebhookPayload } from '../utils/parser.js';
 import { generateReviewId } from '../utils/hash.js';
 import { isReviewIdInCache, addReviewIdToCache } from '../utils/lruCache.js';
 import { getOrCreateMonthlySpreadsheet } from './driveService.js';
-import { ensureReviewsTab, ensureHeaders, checkDuplicateReviewId, appendReview } from './sheetsService.js';
+import { ensureReviewsTab, ensureHeaders, checkDuplicateReviewId, appendReview, ensureNotificationConfigTab } from './sheetsService.js';
 import { getStandardBrandName } from './brandRegistry.js';
 
 interface Logger {
@@ -46,6 +46,9 @@ export async function processReview(
 
   // Ensure headers exist
   await ensureHeaders(spreadsheetId);
+
+  // Ensure NotificationConfig tab exists (잔디 웹훅 설정용)
+  await ensureNotificationConfigTab(spreadsheetId);
 
   // Check duplicate in Google Sheets
   const isDuplicate = await checkDuplicateReviewId(spreadsheetId, reviewId);

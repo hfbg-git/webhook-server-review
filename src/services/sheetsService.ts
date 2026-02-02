@@ -2,6 +2,7 @@ import { getSheetsClient } from './googleAuth.js';
 import { REVIEWS_HEADERS, ParsedReview, AIProcessingResult } from '../types/index.js';
 
 const REVIEWS_TAB = 'Reviews';
+const NOTIFICATION_CONFIG_TAB = 'NotificationConfig';
 const DUP_CHECK_ROWS = parseInt(process.env.DUP_CHECK_LOOKBACK_ROWS || '2000', 10);
 
 export interface ReviewRow {
@@ -190,4 +191,46 @@ export async function markReviewAsFailed(spreadsheetId: string, rowIndex: number
       values: [['FAILED', '', '', '', '', now, 'FAILED']],
     },
   });
+}
+
+export async function ensureNotificationConfigTab(spreadsheetId: string): Promise<void> {
+  const sheets = getSheetsClient();
+
+  const spreadsheet = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets.properties.title',
+  });
+
+  const existingSheets = spreadsheet.data.sheets || [];
+  const hasConfigTab = existingSheets.some(
+    (sheet) => sheet.properties?.title === NOTIFICATION_CONFIG_TAB
+  );
+
+  if (!hasConfigTab) {
+    // 탭 생성
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            addSheet: {
+              properties: {
+                title: NOTIFICATION_CONFIG_TAB,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    // 헤더 추가
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${NOTIFICATION_CONFIG_TAB}!A1:D1`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [['brand_name', 'jandi_webhook_url', 'enabled', 'notification_level']],
+      },
+    });
+  }
 }

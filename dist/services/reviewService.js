@@ -27,6 +27,8 @@ async function processReview(payload, logger) {
     await (0, sheetsService_js_1.ensureReviewsTab)(spreadsheetId);
     // Ensure headers exist
     await (0, sheetsService_js_1.ensureHeaders)(spreadsheetId);
+    // Ensure NotificationConfig tab exists (잔디 웹훅 설정용)
+    await (0, sheetsService_js_1.ensureNotificationConfigTab)(spreadsheetId);
     // Check duplicate in Google Sheets
     const isDuplicate = await (0, sheetsService_js_1.checkDuplicateReviewId)(spreadsheetId, reviewId);
     if (isDuplicate) {

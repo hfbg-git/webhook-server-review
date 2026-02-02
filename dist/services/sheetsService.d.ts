@@ -16,4 +16,5 @@ export declare function appendReview(spreadsheetId: string, review: ParsedReview
 export declare function getNewReviews(spreadsheetId: string, limit: number): Promise<ReviewRow[]>;
 export declare function updateReviewWithAIResults(spreadsheetId: string, rowIndex: number, result: AIProcessingResult): Promise<void>;
 export declare function markReviewAsFailed(spreadsheetId: string, rowIndex: number): Promise<void>;
+export declare function ensureNotificationConfigTab(spreadsheetId: string): Promise<void>;
 //# sourceMappingURL=sheetsService.d.ts.map

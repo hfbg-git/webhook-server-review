@@ -7,9 +7,11 @@ exports.appendReview = appendReview;
 exports.getNewReviews = getNewReviews;
 exports.updateReviewWithAIResults = updateReviewWithAIResults;
 exports.markReviewAsFailed = markReviewAsFailed;
+exports.ensureNotificationConfigTab = ensureNotificationConfigTab;
 const googleAuth_js_1 = require("./googleAuth.js");
 const index_js_1 = require("../types/index.js");
 const REVIEWS_TAB = 'Reviews';
+const NOTIFICATION_CONFIG_TAB = 'NotificationConfig';
 const DUP_CHECK_ROWS = parseInt(process.env.DUP_CHECK_LOOKBACK_ROWS || '2000', 10);
 async function ensureReviewsTab(spreadsheetId) {
     const sheets = (0, googleAuth_js_1.getSheetsClient)();
@@ -153,5 +155,40 @@ async function markReviewAsFailed(spreadsheetId, rowIndex) {
             values: [['FAILED', '', '', '', '', now, 'FAILED']],
         },
     });
+}
+async function ensureNotificationConfigTab(spreadsheetId) {
+    const sheets = (0, googleAuth_js_1.getSheetsClient)();
+    const spreadsheet = await sheets.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets.properties.title',
+    });
+    const existingSheets = spreadsheet.data.sheets || [];
+    const hasConfigTab = existingSheets.some((sheet) => sheet.properties?.title === NOTIFICATION_CONFIG_TAB);
+    if (!hasConfigTab) {
+        // 탭 생성
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [
+                    {
+                        addSheet: {
+                            properties: {
+                                title: NOTIFICATION_CONFIG_TAB,
+                            },
+                        },
+                    },
+                ],
+            },
+        });
+        // 헤더 추가
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${NOTIFICATION_CONFIG_TAB}!A1:D1`,
+            valueInputOption: 'RAW',
+            requestBody: {
+                values: [['brand_name', 'jandi_webhook_url', 'enabled', 'notification_level']],
+            },
+        });
+    }
 }
 //# sourceMappingURL=sheetsService.js.map
