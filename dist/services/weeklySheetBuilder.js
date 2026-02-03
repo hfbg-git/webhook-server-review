@@ -395,6 +395,8 @@ async function createRawDataTab(spreadsheetId, aggregation) {
         'sentiment',
         'summary',
         'keywords',
+        'review_url',
+        'image_url',
     ];
     const values = [headers];
     for (const review of aggregation.rawData) {
@@ -407,6 +409,8 @@ async function createRawDataTab(spreadsheetId, aggregation) {
             review.sentiment,
             review.summary,
             review.keywords.join(', '),
+            review.reviewUrl || '',
+            review.imageUrl || '',
         ]);
     }
     await writeToSheet(spreadsheetId, '원본 데이터!A1', values);

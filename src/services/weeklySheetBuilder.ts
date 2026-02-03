@@ -495,6 +495,8 @@ async function createRawDataTab(
     'sentiment',
     'summary',
     'keywords',
+    'review_url',
+    'image_url',
   ];
 
   const values: (string | number)[][] = [headers];
@@ -509,6 +511,8 @@ async function createRawDataTab(
       review.sentiment,
       review.summary,
       review.keywords.join(', '),
+      review.reviewUrl || '',
+      review.imageUrl || '',
     ]);
   }
 
