@@ -8,6 +8,8 @@ const driveService_js_1 = require("./driveService.js");
 const sheetsService_js_1 = require("./sheetsService.js");
 const brandRegistry_js_1 = require("./brandRegistry.js");
 async function processReview(payload, logger) {
+    // BrandRegistry 캐시 로드 (탭 자동 생성 포함)
+    await (0, brandRegistry_js_1.loadBrandCache)();
     const parsed = (0, parser_js_1.parseWebhookPayload)(payload);
     const reviewId = (0, hash_js_1.generateReviewId)(parsed.brandName, parsed.storeName, parsed.platform, parsed.rating, parsed.reviewText, parsed.reviewCreatedAt);
     // Check LRU cache first for quick duplicate detection

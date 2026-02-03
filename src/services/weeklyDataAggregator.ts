@@ -532,6 +532,11 @@ function shouldExcludeKeyword(keyword: string, brandName: string): boolean {
     return true;
   }
 
+  // 지점명 패턴 체크 (~점, ~지점, ~직영점 등)
+  if (/점$/.test(keyword) || /지점$/.test(keyword) || /직영점$/.test(keyword)) {
+    return true;
+  }
+
   return false;
 }
 

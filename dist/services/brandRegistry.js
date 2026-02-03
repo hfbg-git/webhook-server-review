@@ -8,8 +8,8 @@ exports.getStandardBrandNameSync = getStandardBrandNameSync;
 exports.isCacheLoaded = isCacheLoaded;
 exports.seedInitialBrands = seedInitialBrands;
 const googleAuth_js_1 = require("./googleAuth.js");
+const driveService_js_1 = require("./driveService.js");
 const BRAND_REGISTRY_TAB = 'BrandRegistry';
-const RAW_SHEET_NAME_PREFIX = process.env.RAW_SHEET_NAME_PREFIX || 'ReviewDoctor_Raw_';
 // 메인 브랜드 목록 (앞 3글자 기준)
 exports.MAIN_BRAND_PREFIXES = [
     '화락바', // 화락바베큐치킨
@@ -43,30 +43,14 @@ function getPrefix3Key(brandName) {
 }
 /**
  * 현재 월의 스프레드시트 ID 가져오기
+ * driveService의 검증된 함수 재사용
  */
 async function getCurrentSheetId() {
     if (currentSheetId)
         return currentSheetId;
-    const sheets = (0, googleAuth_js_1.getSheetsClient)();
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const sheetName = `${RAW_SHEET_NAME_PREFIX}${year}_${month}`;
-    // 폴더에서 시트 찾기
-    const { google } = await import('googleapis');
-    const drive = google.drive({ version: 'v3', auth: sheets.context._options.auth });
-    const folderId = process.env.RAW_SHEETS_FOLDER_ID;
-    const response = await drive.files.list({
-        q: `name='${sheetName}' and '${folderId}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
-        fields: 'files(id)',
-        spaces: 'drive',
-    });
-    const files = response.data.files || [];
-    if (files.length > 0 && files[0].id) {
-        currentSheetId = files[0].id;
-        return currentSheetId;
-    }
-    throw new Error(`Spreadsheet not found: ${sheetName}`);
+    const { spreadsheetId } = await (0, driveService_js_1.getOrCreateMonthlySpreadsheet)();
+    currentSheetId = spreadsheetId;
+    return currentSheetId;
 }
 /**
  * BrandRegistry 탭이 있는지 확인하고 없으면 생성

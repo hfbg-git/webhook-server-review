@@ -4,7 +4,7 @@ import { generateReviewId } from '../utils/hash.js';
 import { isReviewIdInCache, addReviewIdToCache } from '../utils/lruCache.js';
 import { getOrCreateMonthlySpreadsheet } from './driveService.js';
 import { ensureReviewsTab, ensureHeaders, checkDuplicateReviewId, appendReview, ensureNotificationConfigTab } from './sheetsService.js';
-import { getStandardBrandName } from './brandRegistry.js';
+import { getStandardBrandName, loadBrandCache } from './brandRegistry.js';
 
 interface Logger {
   info: (obj: object | string) => void;
@@ -16,6 +16,9 @@ export async function processReview(
   payload: WebhookPayload,
   logger: Logger
 ): Promise<WebhookResponse> {
+  // BrandRegistry 캐시 로드 (탭 자동 생성 포함)
+  await loadBrandCache();
+
   const parsed = parseWebhookPayload(payload);
   const reviewId = generateReviewId(
     parsed.brandName,
