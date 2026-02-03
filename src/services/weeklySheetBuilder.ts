@@ -256,7 +256,7 @@ async function createDashboardTab(
 
   // 부정 리뷰 세부 추가
   values.push([]);
-  values.push(['🚨 주요 부정 리뷰 (우선순위순)']);
+  values.push(['🚨 주요 부정 리뷰 (우선순위순)', '', '', '', '리뷰URL', '이미지URL']);
   if (aggregation.negativeReviews && aggregation.negativeReviews.length > 0) {
     aggregation.negativeReviews.slice(0, 5).forEach((review, i) => {
       values.push([
@@ -264,6 +264,8 @@ async function createDashboardTab(
         review.summary,
         review.priority,
         `평점: ${review.rating}점`,
+        review.reviewUrl || '',
+        review.imageUrl || '',
       ]);
     });
   } else {

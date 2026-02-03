@@ -296,17 +296,22 @@ async function getWeeklyReviewData(startDate, endDate) {
     return allReviews;
 }
 /**
- * 브랜드별로 리뷰 그룹화 (유사도 50% 이상이면 같은 브랜드로 처리)
+ * 브랜드별로 리뷰 그룹화 (앞 3글자 + 유사도 조합)
+ * - 앞 3글자가 같으면서 유사도 60% 이상인 경우만 같은 브랜드로 처리
+ * - 띄어쓰기/오타 변형은 합쳐지고, 다른 브랜드는 분리됨
  */
 function groupByBrand(reviews) {
     const brandMap = new Map();
-    const SIMILARITY_THRESHOLD = 0.5;
+    const SIMILARITY_THRESHOLD = 0.6;
     for (const review of reviews) {
         const brand = review.brandName;
+        const brandPrefix = brand.replace(/\s+/g, '').slice(0, 3);
         let matchedKey = null;
-        // 기존 키들과 유사도 비교
+        // 1차: 앞 3글자가 같은 브랜드 찾기
+        // 2차: 그 중 유사도 60% 이상인 경우만 같은 브랜드로 처리
         for (const existingKey of brandMap.keys()) {
-            if (calculateSimilarity(brand, existingKey) >= SIMILARITY_THRESHOLD) {
+            const existingPrefix = existingKey.replace(/\s+/g, '').slice(0, 3);
+            if (brandPrefix === existingPrefix && calculateSimilarity(brand, existingKey) >= SIMILARITY_THRESHOLD) {
                 matchedKey = existingKey;
                 break;
             }
