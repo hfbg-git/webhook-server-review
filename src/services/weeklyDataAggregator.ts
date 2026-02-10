@@ -171,13 +171,15 @@ function parseKoreanDate(dateStr: string): Date | null {
       return new Date(dateStr);
     }
 
-    // 한국어 형식 파싱
-    const match = dateStr.match(/(\d+)\.\s*(\d+)\.\s*(\d+)\.\s*(오전|오후)\s*(\d+):(\d+):?(\d+)?/);
+    // 한국어 형식 파싱 (오전/오후 또는 AM/PM)
+    const match = dateStr.match(/(\d+)\.\s*(\d+)\.\s*(\d+)\.\s*(오전|오후|AM|PM)\s*(\d+):(\d+):?(\d+)?/i);
     if (match) {
       const [, year, month, day, ampm, hour, minute, second = '0'] = match;
       let h = parseInt(hour, 10);
-      if (ampm === '오후' && h !== 12) h += 12;
-      if (ampm === '오전' && h === 12) h = 0;
+      const isPM = ampm === '오후' || ampm.toUpperCase() === 'PM';
+      const isAM = ampm === '오전' || ampm.toUpperCase() === 'AM';
+      if (isPM && h !== 12) h += 12;
+      if (isAM && h === 12) h = 0;
 
       return new Date(
         parseInt(year, 10),
