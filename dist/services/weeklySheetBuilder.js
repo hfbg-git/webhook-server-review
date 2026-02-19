@@ -136,8 +136,41 @@ async function writeToSheet(spreadsheetId, range, values) {
     await sheets.spreadsheets.values.update({
         spreadsheetId,
         range,
-        valueInputOption: 'RAW',
+        valueInputOption: 'USER_ENTERED',
         requestBody: { values },
+    });
+}
+/**
+ * 특정 시트의 행 높이 설정
+ */
+async function setRowHeight(spreadsheetId, sheetName, startRow, endRow, height) {
+    const sheets = (0, googleAuth_js_1.getSheetsClient)();
+    // sheetId 가져오기
+    const spreadsheet = await sheets.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets.properties',
+    });
+    const sheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === sheetName);
+    if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0)
+        return;
+    await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+            requests: [{
+                    updateDimensionProperties: {
+                        range: {
+                            sheetId: sheet.properties.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: startRow - 1, // 0-based
+                            endIndex: endRow,
+                        },
+                        properties: {
+                            pixelSize: height,
+                        },
+                        fields: 'pixelSize',
+                    },
+                }],
+        },
     });
 }
 /**
@@ -202,16 +235,19 @@ async function createDashboardTab(spreadsheetId, aggregation) {
     }
     // 부정 리뷰 세부 추가
     values.push([]);
-    values.push(['🚨 주요 부정 리뷰 (우선순위순)', '', '', '', '리뷰URL', '이미지URL']);
-    if (aggregation.negativeReviews && aggregation.negativeReviews.length > 0) {
-        aggregation.negativeReviews.slice(0, 5).forEach((review, i) => {
+    values.push(['🚨 주요 부정 리뷰 (우선순위순)', '', '', '', '리뷰URL', '이미지']);
+    // 부정 리뷰 데이터 시작 행 번호 기록 (1-based, 헤더 행 다음)
+    const negativeReviewStartRow = values.length + 1;
+    const negativeReviews = aggregation.negativeReviews?.slice(0, 5) || [];
+    if (negativeReviews.length > 0) {
+        negativeReviews.forEach((review, i) => {
             values.push([
                 `${i + 1}. [${review.storeName}]`,
                 review.summary,
                 review.priority,
                 `평점: ${review.rating}점`,
                 review.reviewUrl || '',
-                review.imageUrl || '',
+                review.imageUrl ? `=IMAGE("${review.imageUrl}", 4, 100, 100)` : '',
             ]);
         });
     }
@@ -219,6 +255,10 @@ async function createDashboardTab(spreadsheetId, aggregation) {
         values.push(['이번 주 부정 리뷰 없음']);
     }
     await writeToSheet(spreadsheetId, '대시보드!A1', values);
+    // 부정 리뷰 행 높이 조절 (이미지가 100x100이므로 110픽셀로 설정)
+    if (negativeReviews.length > 0) {
+        await setRowHeight(spreadsheetId, '대시보드', negativeReviewStartRow, negativeReviewStartRow + negativeReviews.length, 110);
+    }
 }
 /**
  * 매장별 분석 탭 생성
