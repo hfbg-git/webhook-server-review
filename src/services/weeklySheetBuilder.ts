@@ -299,21 +299,37 @@ async function createDashboardTab(
     }
   }
 
-  // 부정 리뷰 세부 추가
+  // 부정 리뷰 세부 추가 (부정 리뷰 상세 탭과 동일한 컬럼 구조)
   values.push([]);
-  values.push(['🚨 주요 부정 리뷰 (우선순위순)', '', '', '', '리뷰URL', '이미지']);
+  values.push(['🚨 주요 부정 리뷰 (상위 5건)']);
+  values.push([
+    'received_at',
+    'store_name',
+    'platform',
+    'rating',
+    'summary',
+    'keywords',
+    'original_text',
+    'priority',
+    'review_url',
+    'image',
+  ]);
 
   // 부정 리뷰 데이터 시작 행 번호 기록 (1-based, 헤더 행 다음)
   const negativeReviewStartRow = values.length + 1;
   const negativeReviews = aggregation.negativeReviews?.slice(0, 5) || [];
 
   if (negativeReviews.length > 0) {
-    negativeReviews.forEach((review, i) => {
+    negativeReviews.forEach((review) => {
       values.push([
-        `${i + 1}. [${review.storeName}]`,
+        review.receivedAt,
+        review.storeName,
+        review.platform,
+        review.rating,
         review.summary,
+        review.keywords.join(', '),
+        review.originalText,
         review.priority,
-        `평점: ${review.rating}점`,
         review.reviewUrl || '',
         review.imageUrl ? `=IMAGE("${review.imageUrl}", 4, 100, 100)` : '',
       ]);

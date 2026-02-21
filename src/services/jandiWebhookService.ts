@@ -31,11 +31,17 @@ function buildWeeklyReportMessage(
     ? issueKeywords.slice(0, 5).map((k, i) => `${i + 1}. ${k.keyword}(${k.totalCount}건)`).join(' | ')
     : '이번 주 부정 키워드 없음';
 
-  // 부정 리뷰 세부 정보 (우선순위 높은 순 최대 3개)
+  // 부정 리뷰 세부 정보 (우선순위 높은 순 최대 5개, 이미지 URL 포함)
   const topNegativeReviews = negativeReviews.length > 0
     ? negativeReviews
-        .slice(0, 3)
-        .map((r, i) => `${i + 1}. [${r.storeName}] ${r.summary} (${r.priority})`)
+        .slice(0, 5)
+        .map((r, i) => {
+          let text = `${i + 1}. [${r.storeName}] ${r.summary} (${r.priority})`;
+          if (r.imageUrl) {
+            text += `\n   📷 ${r.imageUrl}`;
+          }
+          return text;
+        })
         .join('\n')
     : '이번 주 부정 리뷰 없음';
 
