@@ -254,5 +254,6 @@ export interface JandiWebhookMessage {
   connectInfo: Array<{
     title: string;
     description: string;
+    imageUrl?: string;
   }>;
 }

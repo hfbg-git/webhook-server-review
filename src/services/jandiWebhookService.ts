@@ -31,19 +31,12 @@ function buildWeeklyReportMessage(
     ? issueKeywords.slice(0, 5).map((k, i) => `${i + 1}. ${k.keyword}(${k.totalCount}건)`).join(' | ')
     : '이번 주 부정 키워드 없음';
 
-  // 부정 리뷰 세부 정보 (우선순위 높은 순 최대 5개, 이미지 URL 포함)
-  const topNegativeReviews = negativeReviews.length > 0
-    ? negativeReviews
-        .slice(0, 5)
-        .map((r, i) => {
-          let text = `${i + 1}. [${r.storeName}] ${r.summary} (${r.priority})`;
-          if (r.imageUrl) {
-            text += `\n   📷 ${r.imageUrl}`;
-          }
-          return text;
-        })
-        .join('\n')
-    : '이번 주 부정 리뷰 없음';
+  // 부정 리뷰 개별 항목 (이미지 포함)
+  const negativeReviewItems = negativeReviews.slice(0, 5).map((r, i) => ({
+    title: `🚨 부정 리뷰 ${i + 1}`,
+    description: `[${r.storeName}] ${r.summary} (${r.priority})`,
+    imageUrl: r.imageUrl || undefined,
+  }));
 
   // AI 인사이트 요약
   const aiSummary = aiInsights?.summary || '인사이트 생성 중...';
@@ -64,10 +57,9 @@ function buildWeeklyReportMessage(
         title: '⚠️ 부정 키워드 TOP 5',
         description: issueKeywordsText,
       },
-      {
-        title: '🚨 주요 부정 리뷰',
-        description: topNegativeReviews,
-      },
+      ...(negativeReviewItems.length > 0
+        ? negativeReviewItems
+        : [{ title: '🚨 주요 부정 리뷰', description: '이번 주 부정 리뷰 없음' }]),
       {
         title: '🤖 AI 인사이트',
         description: aiSummary,
